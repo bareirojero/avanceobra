@@ -1,14 +1,15 @@
-// Renderiza un informe a PDF y HTML sin llamar a la IA.
+// Arma un informe sin IA y lo renderiza a PDF y HTML.
 //   node scripts/ejemplo.ts [carpeta-con-datos] [salida]
-// La carpeta trae datos.json, informe.json y fotos/ (por defecto, ejemplo/).
-// Con --generar (y ANTHROPIC_API_KEY en el entorno) primero lo genera con Claude.
+// La carpeta trae datos.json y fotos/ (por defecto, ejemplo/).
+// Con --ia (y ANTHROPIC_API_KEY en el entorno) lo redacta Claude.
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { generarInforme } from "../src/generar.ts";
 import { informeHtml } from "../src/render/html.ts";
 import { informePdf } from "../src/render/pdf.ts";
 import { armarReferencias } from "../src/render/referencias.ts";
-import { ContenidoInforme, type DatosDelDia } from "../src/tipos.ts";
+import { armarInforme } from "../src/armar.ts";
+import type { DatosDelDia } from "../src/tipos.ts";
 
 const raiz = path.resolve(import.meta.dirname, "..");
 const [entrada, salida] = process.argv.slice(2).filter((a) => !a.startsWith("--"));
@@ -17,9 +18,7 @@ const destino = path.resolve(salida ?? path.join(raiz, "salida"));
 const leerFoto = (ruta: string) => readFile(path.join(carpeta, "fotos", ruta));
 
 const datos: DatosDelDia = JSON.parse(await readFile(path.join(carpeta, "datos.json"), "utf8"));
-const contenido = process.argv.includes("--generar")
-  ? await generarInforme(datos, leerFoto)
-  : ContenidoInforme.parse(JSON.parse(await readFile(path.join(carpeta, "informe.json"), "utf8")));
+const contenido = process.argv.includes("--ia") ? await generarInforme(datos, leerFoto) : armarInforme(datos);
 
 const prefijo = datos.obra.nombre.split(/\s+/)[0];
 const ref = await armarReferencias(contenido, datos, leerFoto, { numero: `${prefijo}-001-001` });

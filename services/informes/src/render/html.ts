@@ -34,8 +34,7 @@ export function informeHtml(c: ContenidoInforme, ref: Referencias): string {
     .map((a) => {
       const item = ref.item(a.item_id);
       const sectores = a.sector_ids.map((s) => ref.sector(s)).filter(Boolean) as string[];
-      const fotos = a.fotos
-        .map((f) => {
+      const figuras = a.fotos.map((f) => {
           const leyenda = f.anotaciones
             .map((n) => {
               const an = ref.anotacion(f.foto_id, n);
@@ -46,21 +45,24 @@ export function informeHtml(c: ContenidoInforme, ref: Referencias): string {
           return `<figure>
             <img src="${ref.imagen(f.foto_id)}" alt="">
             <figcaption>
-              <div class="epi">${esc(f.epigrafe)}</div>
+              ${f.epigrafe.trim() ? `<div class="epi">${esc(f.epigrafe)}</div>` : ""}
               ${leyenda ? `<ol class="leyenda">${leyenda}</ol>` : ""}
               ${meta ? `<div class="meta">${esc(meta.autor)} · ${esc(meta.hora)}</div>` : ""}
             </figcaption>
           </figure>`;
-        })
-        .join("");
+      });
+      // La primera fila de fotos viaja con el título: nunca queda un título solo al pie de página.
+      const primera = figuras.slice(0, 2).join("");
+      const resto = figuras.slice(2).join("");
       const sub = [item?.rubro, ...sectores].filter(Boolean).join(" · ");
       return `<section class="bloque">
         <div class="cabeza">
           <h2>${item?.numero ? `<span class="codigo">${esc(item.numero)}</span>` : ""}${esc(a.titulo)}</h2>
           <div class="sub">${esc(sub)}${item ? `<span class="pep">${esc(item.codigo)}</span>` : ""}</div>
-          <div class="texto">${parrafos(a.texto)}</div>
+          ${a.texto.trim() ? `<div class="texto">${parrafos(a.texto)}</div>` : ""}
+          ${primera ? `<div class="fotos">${primera}</div>` : ""}
         </div>
-        ${fotos ? `<div class="fotos">${fotos}</div>` : ""}
+        ${resto ? `<div class="fotos resto">${resto}</div>` : ""}
       </section>`;
     })
     .join("");
@@ -112,6 +114,7 @@ export function informeHtml(c: ContenidoInforme, ref: Referencias): string {
   .pep { font-variant-numeric: tabular-nums; flex: none; }
   .texto p { margin: 0 0 5px; }
   .fotos { display:grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 6px; }
+  .fotos.resto { margin-top: 10px; }
   figure { margin: 0; break-inside: avoid; }
   figure img { max-width: 100%; max-height: 80mm; display:block; }
   figcaption { padding-top: 4px; font-size: 7.5pt; }
@@ -142,7 +145,7 @@ export function informeHtml(c: ContenidoInforme, ref: Referencias): string {
 
   <div class="datos">${datos.map(([k, v]) => `<div class="dato"><div class="k">${esc(k)}</div><div class="v">${esc(v)}</div></div>`).join("")}</div>
 
-  <div class="resumen"><b>Resumen del día.</b> ${esc(c.resumen)}</div>
+  ${c.resumen.trim() ? `<div class="resumen"><b>Resumen del día.</b> ${esc(c.resumen)}</div>` : ""}
 
   ${avances}
   ${incidentes}

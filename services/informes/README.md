@@ -1,30 +1,20 @@
-# services/informes · Informe diario con IA
+# services/informes · Informe diario
 
-Arma el informe diario de una obra a partir de las fotos del día (cada una vinculada a un ítem del itemizado, con su comentario y, si las hay, marcas numeradas) y lo exporta a PDF. El editor lo revisa y corrige en el panel antes de publicarlo y descargarlo.
+Arma el informe diario de una obra a partir de las fotos del día y lo exporta a PDF con el formato aprobado. Cada foto está vinculada a un ítem del itemizado, tiene su comentario y, si las hay, marcas numeradas. El editor revisa y corrige el informe en el panel antes de publicarlo y descargarlo.
 
-## Cómo funciona
+## Sin IA (por defecto, costo cero)
 
-1. **Fotos con marcas dibujadas** (`src/anotar.ts`): la IA ve cada foto con los círculos, flechas y rectángulos numerados que hizo el residente. Las fotos sin marcas (lo habitual del capataz) van con su comentario general, que pesa lo mismo.
-2. **Un avance por ítem, con visión** (`src/generar.ts`): grupos de hasta 30 fotos (ítems enteros, en el orden del itemizado), en paralelo. Claude redacta el avance de cada ítem en palabras (sin porcentajes), junta lo que dicen distintas personas y marca alertas para el editor: contradicciones, información faltante, seguridad, calidad.
-3. **Síntesis, solo texto**: resumen del día, alertas que surgen de cruzar ítems, incidentes y pendientes.
-4. **Sin IA**: orden por itemizado, autores e ítems previstos sin registro.
-5. **Salida**: `ContenidoInforme` v3 (`src/tipos.ts`), validado con zod. Se guarda en `informes.contenido_ia` (lo de la IA) y `informes.contenido` (lo corregido).
-6. **PDF** (`src/render/`): HTML A4 con el formato aprobado → Chromium. Las alertas no se imprimen.
+`src/armar.ts` arma un avance por ítem, en el orden del itemizado SAP, con la ruta del rubro y el código PEP. Cada avance lleva sus fotos con las marcas dibujadas y el comentario de cada una al pie, tal como lo escribieron. Clima y personal vienen de lo que carga el editor (`registros_dia`). El editor redacta el resumen del día y, si quiere, un texto por ítem. Para el editor se generan alertas que no salen en el PDF: fotos sin comentario, marcas sin comentario e ítems previstos para el día sin registros.
 
-`src/servicio.ts` expone `generar`, `regenerar` (un avance, con una indicación del editor) y `exportar`. La base y el almacenamiento entran por la interfaz `Almacen`, que implementa `services/api`.
+## Con IA (opcional, apagado)
 
-Modelo: `claude-opus-5-5`, salida estructurada, esfuerzo medio, con respaldo automático del servidor si el modelo rechaza un pedido. La clave va en la variable `ANTHROPIC_API_KEY` del entorno de la nube; nunca en este repositorio.
+Si el entorno tiene `ANTHROPIC_API_KEY`, `generar` usa `src/generar.ts`. Ahí Claude mira las fotos, redacta el texto de cada ítem uniendo lo que dicen distintas personas, y agrega alertas de contradicción, seguridad y calidad, más un resumen, incidentes y pendientes. Cuesta unos US$0,60 por día con 40 fotos. Hoy está apagado por decisión de Jerónimo (21/10/2026).
 
-## Probar
+## Uso
+
+`src/servicio.ts` expone `generar`, `regenerar` (solo con IA) y `exportar`. La base y el almacenamiento entran por la interfaz `Almacen`, que implementa `services/api`. El PDF sale de `src/render/html.ts` (HTML A4) con Chromium (`CHROMIUM_PATH`), y ese mismo HTML sirve de vista previa en el panel.
 
 ```
-npm install
-CHROMIUM_PATH=/ruta/a/chrome node scripts/ejemplo.ts                 # renderiza ejemplo/informe.json
-ANTHROPIC_API_KEY=... CHROMIUM_PATH=... node scripts/ejemplo.ts --generar   # lo genera con Claude
+pnpm --filter @registro-obra/informes typecheck
+CHROMIUM_PATH=/ruta/a/chrome pnpm --filter @registro-obra/informes ejemplo    # PDF de ejemplo/ (obra y fotos de relleno)
 ```
-
-`ejemplo/` usa una obra y fotos de relleno; `ejemplo/informe.json` está redactado a mano con el formato de salida.
-
-## Costo estimado
-
-Opus 5.5 cobra US$4 por millón de tokens de entrada y US$20 por millón de salida. Un día de 40 fotos cuesta unos US$0,60, o unos US$15 por obra al mes con 25 días hábiles. Las fotos se mandan a 1.092 px de lado mayor (~1.600 tokens cada una).

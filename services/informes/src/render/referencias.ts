@@ -71,8 +71,8 @@ export async function armarReferencias(
     fechaLarga: fechaLarga(datos.fecha),
     fechaCorta: fechaCorta(datos.fecha),
     pie: opciones.revisadoPor
-      ? `Avance de Obra · Redactado con asistencia de IA a partir de los registros de campo. Revisado por ${opciones.revisadoPor}.`
-      : "Avance de Obra · Borrador redactado con asistencia de IA a partir de los registros de campo. Pendiente de revisión.",
+      ? `Avance de Obra · Armado con los registros de campo. Revisado por ${opciones.revisadoPor}.`
+      : "Avance de Obra · Borrador armado con los registros de campo. Pendiente de revisión.",
     usuario: (id) => usuarios.get(id),
     sector: (id) => datos.sectores.find((s) => s.id === id)?.nombre,
     item: (id) => {

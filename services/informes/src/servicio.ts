@@ -1,4 +1,5 @@
-import { generarInforme, regenerarAvance, type LeerFoto } from "./generar.ts";
+import { armarInforme } from "./armar.ts";
+import { MODELO, generarInforme, regenerarAvance, type LeerFoto } from "./generar.ts";
 import { informePdf } from "./render/pdf.ts";
 import { armarReferencias } from "./render/referencias.ts";
 import type { ContenidoInforme, DatosDelDia } from "./tipos.ts";
@@ -18,11 +19,14 @@ export interface Almacen {
     contenido: ContenidoInforme | null;
     revisado_por: string | null; // nombre del editor que lo publicó
   }>;
-  guardarBorrador(informe_id: string, contenido: ContenidoInforme, modelo: string): Promise<void>; // contenido_ia y contenido, estado borrador
+  guardarBorrador(informe_id: string, contenido: ContenidoInforme, modelo: string | null): Promise<void>; // contenido_ia y contenido, estado borrador
   guardarError(informe_id: string, mensaje: string): Promise<void>;
   guardarContenido(informe_id: string, contenido: ContenidoInforme): Promise<void>; // solo contenido
   guardarPdf(informe_id: string, pdf: Buffer): Promise<string>; // devuelve la ruta
 }
+
+/** Con clave de la API de Claude en el entorno, redacta la IA; sin clave, se arma sin IA (costo cero). */
+export const conIA = () => !!process.env.ANTHROPIC_API_KEY;
 
 /** Genera el borrador. La API crea la fila en "generando" y llama esto sin esperar. */
 export async function generar(almacen: Almacen, informe_id: string) {
@@ -30,8 +34,8 @@ export async function generar(almacen: Almacen, informe_id: string) {
     const inf = await almacen.informe(informe_id);
     const datos = await almacen.datosDelDia(inf.obra_id, inf.fecha);
     if (!datos.fotos.length) throw new Error("No hay fotos cargadas para ese día.");
-    const contenido = await generarInforme(datos, almacen.leerFoto);
-    await almacen.guardarBorrador(informe_id, contenido, "claude-opus-5-5");
+    const contenido = conIA() ? await generarInforme(datos, almacen.leerFoto) : armarInforme(datos);
+    await almacen.guardarBorrador(informe_id, contenido, conIA() ? MODELO : null);
   } catch (e) {
     await almacen.guardarError(informe_id, e instanceof Error ? e.message : String(e));
   }
@@ -39,6 +43,7 @@ export async function generar(almacen: Almacen, informe_id: string) {
 
 /** Reescribe un avance con la indicación del editor y lo reemplaza en el contenido editado. */
 export async function regenerar(almacen: Almacen, informe_id: string, avance_id: string, indicacion?: string) {
+  if (!conIA()) throw new Error("Reescribir con IA no está disponible: el sistema funciona sin IA.");
   const inf = await almacen.informe(informe_id);
   const avance = inf.contenido?.avances.find((a) => a.id === avance_id);
   if (!inf.contenido || !avance) throw new Error("No existe ese avance en el informe.");
@@ -60,3 +65,6 @@ export async function exportar(almacen: Almacen, informe_id: string) {
   });
   return almacen.guardarPdf(informe_id, await informePdf(inf.contenido, ref));
 }
+
+export { armarInforme } from "./armar.ts";
+export type { ContenidoInforme, DatosDelDia } from "./tipos.ts";

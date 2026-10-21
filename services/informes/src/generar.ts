@@ -204,7 +204,7 @@ function describirFoto(datos: DatosDelDia, f: Foto): string {
 
 // ─── Lógica sin IA ──────────────────────────────────────────────────────────
 
-const horaLocal = (iso: string) =>
+export const horaLocal = (iso: string) =>
   new Date(iso).toLocaleTimeString("es-PY", { hour: "2-digit", minute: "2-digit", timeZone: "America/Asuncion" });
 
 export const fechaLarga = (fecha: string) =>
