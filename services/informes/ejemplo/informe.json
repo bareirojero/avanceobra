@@ -1,0 +1,140 @@
+{
+  "version_esquema": 3,
+  "titulo": "Informe diario · OC.0000 – OBRA DE EJEMPLO · 20/10/2026",
+  "resumen": "Se desencofró el muro sobre viga del eje 4 y se retiró el encofrado del coronamiento; mañana el equipo pasa al eje 5. En la base del muro aparece un nido de piedra que hay que reparar antes de seguir. Para el cabezal C12 se preparó el hormigón de limpieza, que se coloca por la tarde, pero falta 1 m³. El encofrado lateral de cabezales estaba previsto para hoy y no tiene registros.",
+  "clima": null,
+  "personal": [],
+  "avances": [
+    {
+      "id": "av-i-OC.0000D00300303",
+      "item_id": "i-OC.0000D00300303",
+      "titulo": "Suministro, montaje y desmontaje de encofrado",
+      "texto": "Se retiró el encofrado del coronamiento del muro del eje 4. El trabajo se hace desde escalera, con un operario arriba y un ayudante sosteniéndola desde el piso. Mañana el equipo continúa con el muro del eje 5.",
+      "sector_ids": [],
+      "fotos": [
+        {
+          "foto_id": "f2",
+          "epigrafe": "Desencofrado del coronamiento del muro del eje 4, trabajo desde escalera.",
+          "anotaciones": []
+        }
+      ],
+      "autores": [
+        "u-ramon"
+      ],
+      "fuentes": {
+        "foto_ids": [
+          "f2"
+        ],
+        "anotacion_ids": []
+      }
+    },
+    {
+      "id": "av-i-OC.0000D00300304",
+      "item_id": "i-OC.0000D00300304",
+      "titulo": "Hormigonado del muro de hormigón armado",
+      "texto": "El muro del eje 4 quedó desencofrado. Una de sus caras muestra buena terminación, pero en la base hay un nido de piedra que se debe reparar. Al pie del muro quedaron restos de hormigón y madera que hay que limpiar.",
+      "sector_ids": [],
+      "fotos": [
+        {
+          "foto_id": "f1",
+          "epigrafe": "Muro del eje 4 desencofrado, con nido de piedra en la base.",
+          "anotaciones": [
+            1,
+            2
+          ]
+        },
+        {
+          "foto_id": "f5",
+          "epigrafe": "Cara del muro con buena terminación y restos al pie.",
+          "anotaciones": [
+            1,
+            2
+          ]
+        }
+      ],
+      "autores": [
+        "u-laura"
+      ],
+      "fuentes": {
+        "foto_ids": [
+          "f1",
+          "f5"
+        ],
+        "anotacion_ids": [
+          "a-f1-1",
+          "a-f1-2",
+          "a-f5-1",
+          "a-f5-2"
+        ]
+      }
+    },
+    {
+      "id": "av-i-OC.0000D005004",
+      "item_id": "i-OC.0000D005004",
+      "titulo": "Hormigón de limpieza C10 (e=5 cm)",
+      "texto": "Se preparó hormigón de limpieza para el cabezal C12, que se coloca por la tarde. Falta 1 m³ para completarlo.",
+      "sector_ids": [],
+      "fotos": [
+        {
+          "foto_id": "f3",
+          "epigrafe": "Hormigón de limpieza preparado para el cabezal C12.",
+          "anotaciones": []
+        }
+      ],
+      "autores": [
+        "u-ramon"
+      ],
+      "fuentes": {
+        "foto_ids": [
+          "f3"
+        ],
+        "anotacion_ids": []
+      }
+    }
+  ],
+  "incidentes": [
+    {
+      "tipo": "faltante",
+      "texto": "Falta 1 m³ de hormigón de limpieza para completar el cabezal C12.",
+      "fotos": []
+    }
+  ],
+  "pendientes": [
+    "Reparar el nido de piedra en la base del muro del eje 4.",
+    "Limpiar los restos de hormigón y madera al pie del muro del eje 4.",
+    "Pedir 1 m³ de hormigón de limpieza para el cabezal C12.",
+    "Iniciar el desencofrado del muro del eje 5."
+  ],
+  "observaciones": null,
+  "autores": [
+    "u-ramon",
+    "u-laura"
+  ],
+  "alertas": [
+    {
+      "tipo": "calidad",
+      "texto": "Nido de piedra en la base del muro del eje 4: definir la reparación antes de seguir.",
+      "foto_ids": [
+        "f1"
+      ],
+      "avance_id": "av-i-OC.0000D00300304"
+    },
+    {
+      "tipo": "seguridad",
+      "texto": "Trabajo en altura desde escalera sostenida a mano; no se ve que esté atada.",
+      "foto_ids": [
+        "f2"
+      ],
+      "avance_id": "av-i-OC.0000D00300303"
+    },
+    {
+      "tipo": "falta_info",
+      "texto": "El encofrado lateral de cabezales estaba previsto para hoy y no tiene registros.",
+      "foto_ids": [],
+      "avance_id": null
+    }
+  ],
+  "items_sin_registro": [
+    "i-OC.0000D005005"
+  ]
+}
