@@ -1,0 +1,16 @@
+# Entorno local: Postgres 16 y Azurite (emulador de Azure Blob Storage).
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: avance_obra
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports: ["5432:5432"]
+    volumes: [db:/var/lib/postgresql/data]
+  blob:
+    image: mcr.microsoft.com/azure-storage/azurite:3.33.0
+    command: azurite-blob --blobHost 0.0.0.0 --loose
+    ports: ["10000:10000"]
+volumes:
+  db:

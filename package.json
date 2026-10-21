@@ -1,0 +1,14 @@
+{
+  "name": "avance-de-obra",
+  "private": true,
+  "packageManager": "pnpm@9.12.3",
+  "scripts": {
+    "typecheck": "pnpm -r typecheck",
+    "db:up": "docker compose up -d",
+    "db:migrate": "node db/migrar.mjs",
+    "db:seed": "node db/migrar.mjs --seed"
+  },
+  "devDependencies": {
+    "typescript": "5.6.3"
+  }
+}

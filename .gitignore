@@ -1,0 +1,16 @@
+node_modules/
+.next/
+dist/
+.expo/
+android/
+ios/
+*.apk
+*.aab
+.env
+.env.*
+!.env.example
+.DS_Store
+# Datos de obra (itemizados, fotos, informes): nunca en el repositorio
+datos/
+*.xlsx
+*.xls
