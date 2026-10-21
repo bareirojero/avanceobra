@@ -86,7 +86,7 @@ export function almacenPara(usuarioId: string) {
       if (!i) throw noEncontrado('Informe');
       return { obra_id: i.obra_id, fecha: i.fecha, numero: numeroInforme(i.sigla, i.numero), contenido: i.contenido, revisado_por: i.revisado_por };
     },
-    async guardarBorrador(informe_id: string, contenido: unknown, modelo: string) {
+    async guardarBorrador(informe_id: string, contenido: unknown, modelo: string | null) {
       await q(
         `update informes set contenido_ia = $2, contenido = $2, modelo_ia = $3, estado = 'borrador', error = null, pdf_path = null
           where id = $1`,

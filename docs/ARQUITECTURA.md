@@ -88,7 +88,7 @@ Las reglas viven en la base (RLS). La API se conecta con el rol `avance_api`, qu
 
 ## Informes
 
-- `POST /api/informes/generar` crea el informe en `generando`, junta las fotos, anotaciones y comentarios del período, el clima y el personal que cargó el editor, llama a Claude y deja el informe en `borrador`.
+- `POST /api/informes/generar` crea el informe en `generando`, junta las fotos, anotaciones y comentarios del período, el clima y el personal que cargó el editor, arma el borrador (sin IA por ahora; el módulo admite sumar un proveedor más adelante) y lo deja en `borrador`.
 - El editor corrige `contenido` en el panel y publica. El PDF se arma con Chromium desde el mismo HTML de la vista previa y se guarda en Blob Storage. Solo PDF.
 - Semanales y mensuales (más adelante): resumen de los diarios publicados del período, usando `informe_fotos`.
 
