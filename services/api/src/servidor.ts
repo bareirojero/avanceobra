@@ -1,9 +1,10 @@
 import cookie from '@fastify/cookie';
 import Fastify from 'fastify';
-import { prepararContenedor } from './archivos.ts';
+import { prepararAlmacen } from './archivos.ts';
 import { config } from './config.ts';
 import { pool } from './db.ts';
 import { manejarError } from './errores.ts';
+import { rutasArchivos } from './rutas/archivos.ts';
 import { rutasAuth } from './rutas/auth.ts';
 import { rutasCampo } from './rutas/campo.ts';
 import { rutasEditor } from './rutas/editor.ts';
@@ -14,6 +15,7 @@ export async function crearServidor() {
     logger: { level: process.env.LOG_LEVEL ?? 'info' },
     trustProxy: true,
     bodyLimit: 2 * 1024 * 1024,
+    maxParamLength: 2000, // tokens firmados de /api/archivos/datos/:token
   });
   await app.register(cookie);
   app.setErrorHandler(manejarError);
@@ -26,6 +28,7 @@ export async function crearServidor() {
   await app.register(
     async (api) => {
       await api.register(rutasAuth);
+      await api.register(rutasArchivos);
       await api.register(rutasCampo);
       await api.register(rutasEditor);
       await api.register(rutasInformes);
@@ -36,7 +39,7 @@ export async function crearServidor() {
 }
 
 if (process.argv[1]?.endsWith('servidor.ts')) {
-  await prepararContenedor();
+  await prepararAlmacen();
   const app = await crearServidor();
   await app.listen({ port: config.puerto, host: '0.0.0.0' });
 }

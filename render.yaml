@@ -1,0 +1,33 @@
+# Despliegue en Render (render.com > New > Blueprint > este repositorio).
+# Los valores con sync: false se cargan a mano en Render y nunca están acá.
+services:
+  - type: web
+    name: avance-obra-api
+    runtime: docker
+    dockerfilePath: services/api/Dockerfile
+    dockerContext: .
+    plan: free
+    region: virginia
+    healthCheckPath: /salud
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: ALMACEN
+        value: sharepoint
+      - key: SHAREPOINT_CARPETA
+        value: Avance de Obra/datos
+      - key: JWT_SECRETO
+        generateValue: true
+      - key: DATABASE_URL
+        sync: false
+      - key: API_URL_PUBLICA
+        sync: false
+      - key: MS_TENANT_ID
+        sync: false
+      - key: MS_CLIENT_ID
+        sync: false
+      - key: MS_CLIENT_SECRET
+        sync: false
+      - key: SHAREPOINT_SITIO
+        sync: false

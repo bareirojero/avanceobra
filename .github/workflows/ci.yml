@@ -34,3 +34,8 @@ jobs:
       - run: pnpm db:seed
       - run: psql "$DATABASE_ADMIN_URL" -c "alter role avance_api with password 'avance_api'"
       - run: pnpm --filter @registro-obra/api test
+      - name: Pruebas con archivos a través de la API (como con SharePoint)
+        run: |
+          psql "$DATABASE_ADMIN_URL" -c 'drop schema public cascade; create schema public; drop table if exists schema_migraciones' >/dev/null
+          pnpm db:seed && psql "$DATABASE_ADMIN_URL" -c "alter role avance_api with password 'avance_api'"
+          ALMACEN_VIA_API=1 pnpm --filter @registro-obra/api test

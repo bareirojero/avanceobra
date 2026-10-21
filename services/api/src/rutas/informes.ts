@@ -235,6 +235,6 @@ export async function rutasInformes(app: FastifyInstance) {
       if (!inf.tiene || !inf.editor) throw new ErrorApi(409, 'conflicto', 'El PDF todavía no está listo');
       ruta = await (await informes()).exportar(almacenPara(usuarioId), id);
     }
-    return respuesta.redirect(urlLectura(ruta!).url);
+    return respuesta.redirect((await urlLectura(ruta!)).url);
   });
 }

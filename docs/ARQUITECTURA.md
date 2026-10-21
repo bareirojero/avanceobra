@@ -11,14 +11,14 @@
  │ login y sesiones · permisos (RLS) · sincronización · URLs firmadas    │
  │ importación del itemizado · usuarios · informes con IA · PDF (Chromium)│
  └───────────┬───────────────────────────┬───────────────────────┬──────┘
-             ▼                           ▼                       ▼
-   PostgreSQL 16 (Azure)       Blob Storage (Azure)       API de Claude
-   datos y permisos            fotos e informes PDF       (redacción del informe)
+             ▼                           ▼
+   PostgreSQL 16 (Neon)        SharePoint (Microsoft 365)
+   datos y permisos            fotos e informes PDF
 ```
 
-Producción en la nube Microsoft de la organización (Azure, región Brazil South): Azure Database for PostgreSQL (servidor flexible), Azure Blob Storage (contenedor privado), Azure Container Apps para la API y la web, y Azure Key Vault para los secretos. GitHub guarda solo código: ningún dato de obra, clave ni contraseña.
+Producción (detalle y pasos en [DESPLIEGUE.md](DESPLIEGUE.md)): fotos y PDF en una carpeta de SharePoint de la organización (Microsoft Graph, permiso solo sobre ese sitio), base en Neon y API en Render, en planes gratuitos. GitHub guarda solo código: ningún dato de obra, clave ni contraseña.
 
-Desarrollo local: `docker compose up -d` levanta Postgres 16 y Azurite (emulador de Blob Storage).
+El almacenamiento es intercambiable (`ALMACEN=sharepoint` o `azure`); en desarrollo local se usa Azurite. `docker compose up -d` levanta Postgres 16 y Azurite.
 
 ## Repositorio
 
@@ -76,8 +76,8 @@ Las reglas viven en la base (RLS). La API se conecta con el rol `avance_api`, qu
 
 ## Fotos y archivos
 
-- Contenedor privado de Blob Storage. Rutas: `fotos/{obra}/{autor}/{foto}.jpg`, `…_mini.jpg` y `informes/{obra}/{informe}.pdf`.
-- La API entrega URLs firmadas de corta duración: de escritura (15 min) solo para la carpeta propia y de lectura (1 h) solo si el usuario puede ver esa obra. Las fotos no pasan por la API.
+- Carpeta de SharePoint (`Avance de Obra/datos`). Rutas: `fotos/{obra}/{autor}/{foto}.jpg`, `…_mini.jpg` y `informes/{obra}/{informe}.pdf`.
+- La API entrega URLs firmadas de corta duración: de escritura (15 min) solo para la carpeta propia y de lectura (1 h) solo si el usuario puede ver esa obra. Con SharePoint la URL apunta a `/api/archivos/datos/:token` (la API pasa los bytes a Graph y, para leer, redirige al enlace de descarga temporal de Graph); con Azure, directo al blob.
 - El teléfono comprime antes de subir (lado mayor 2048 px, JPEG 0,8) y genera la miniatura de 400 px.
 
 ## Sincronización offline

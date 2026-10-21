@@ -190,7 +190,7 @@ export async function rutasCampo(app: FastifyInstance) {
       q(`select puedo_cargar($1) as ok`, [m[1]]),
     );
     if (!ok) throw sinPermiso();
-    const { url, vence } = urlSubida(ruta);
+    const { url, vence } = await urlSubida(ruta);
     return {
       url,
       metodo: 'PUT',
@@ -214,7 +214,7 @@ export async function rutasCampo(app: FastifyInstance) {
       return new Set([...fotos, ...informes].map((r) => r.ruta));
     });
     const urls: Record<string, string> = {};
-    for (const r of rutas) if (permitidas.has(r)) urls[r] = urlLectura(r).url;
+    for (const r of rutas) if (permitidas.has(r)) urls[r] = (await urlLectura(r)).url;
     return { urls };
   });
 }

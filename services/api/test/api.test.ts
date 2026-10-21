@@ -5,7 +5,7 @@ import { idParte, rutaFoto, rutaMiniatura } from '@registro-obra/contrato';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { after, before, test } from 'node:test';
-import { prepararContenedor } from '../src/archivos.ts';
+import { prepararAlmacen } from '../src/archivos.ts';
 import { pool } from '../src/db.ts';
 import { crearServidor } from '../src/servidor.ts';
 
@@ -13,7 +13,7 @@ const OBRA = 'c0000000-0000-4000-8000-000000000001';
 let app: Awaited<ReturnType<typeof crearServidor>>;
 
 before(async () => {
-  await prepararContenedor();
+  await prepararAlmacen();
   app = await crearServidor();
 });
 after(async () => {
@@ -35,6 +35,18 @@ async function entrar(usuario: string, clave = 'obra1234') {
   const { estado, json } = await pedir('POST', '/auth/login', undefined, { usuario, clave, dispositivo: 'app' });
   assert.equal(estado, 200, JSON.stringify(json));
   return json as { acceso: string; renovacion: string; yo: { usuario: { id: string } } };
+}
+
+// Las URLs firmadas pueden apuntar a la propia API (SharePoint) o al almacenamiento.
+async function abrir(url: string, init: { method?: string; headers?: Record<string, string>; body?: Buffer } = {}) {
+  const local = url.match(/^http:\/\/localhost:\d+(\/api\/.*)$/);
+  if (!local) {
+    const r = await fetch(url, init);
+    return { status: r.status, texto: () => r.text() };
+  }
+  const r = await app.inject({ method: (init.method ?? 'GET') as 'GET', url: local[1], headers: init.headers, payload: init.body });
+  if (r.statusCode === 302) return abrir(r.headers.location as string);
+  return { status: r.statusCode, texto: async () => r.body };
 }
 
 const hoy = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/Asuncion' });
@@ -84,8 +96,8 @@ test('login, permisos, fotos y sesiones', async () => {
   assert.equal(ajena.estado, 403);
   const subida = await pedir('POST', '/archivos/subida', campo.acceso, { ruta, content_type: 'image/jpeg' });
   assert.equal(subida.estado, 200);
-  const put = await fetch(subida.json.url, { method: 'PUT', headers: subida.json.encabezados, body: Buffer.from('jpg') });
-  assert.equal(put.status, 201);
+  const put = await abrir(subida.json.url, { method: 'PUT', headers: subida.json.encabezados, body: Buffer.from('jpg') });
+  assert.equal(put.status, 201, await put.texto());
 
   const foto = {
     parte_id: parteId, obra_id: OBRA, item_id: item.id, tomada_en: new Date().toISOString(),
@@ -104,7 +116,7 @@ test('login, permisos, fotos y sesiones', async () => {
 
   const ver = await pedir('POST', '/archivos/ver', campo.acceso, { rutas: [ruta, 'fotos/otra/cosa.jpg'] });
   assert.deepEqual(Object.keys(ver.json.urls), [ruta]);
-  assert.equal(await (await fetch(ver.json.urls[ruta])).text(), 'jpg');
+  assert.equal(await (await abrir(ver.json.urls[ruta])).texto(), 'jpg');
 
   // El lector no ve la carga cruda.
   const lector = await entrar('fiscal');
