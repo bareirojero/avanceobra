@@ -31,3 +31,17 @@ services:
         sync: false
       - key: SHAREPOINT_SITIO
         sync: false
+
+  # Panel web (apps/web). API_URL_INTERNA se lee al compilar: cargala antes del
+  # primer despliegue con la URL de avance-obra-api (ej. https://avance-obra-api.onrender.com).
+  - type: web
+    name: avance-obra-web
+    runtime: node
+    plan: free
+    region: virginia
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm --filter @registro-obra/web build
+    startCommand: pnpm --filter @registro-obra/web start
+    autoDeploy: true
+    envVars:
+      - key: API_URL_INTERNA
+        sync: false

@@ -1,0 +1,23 @@
+{
+  "name": "@registro-obra/informes",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Informe diario con IA: generación con Claude y exportación a PDF",
+  "type": "module",
+  "main": "src/servicio.ts",
+  "types": "src/servicio.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit -p .",
+    "ejemplo": "node scripts/ejemplo.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "0.137.0",
+    "playwright-core": "1.64.1",
+    "sharp": "0.35.5",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "22.10.2",
+    "typescript": "5.6.3"
+  }
+}

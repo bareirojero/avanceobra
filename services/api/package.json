@@ -13,6 +13,7 @@
     "@azure/storage-blob": "12.26.0",
     "@fastify/cookie": "11.0.2",
     "@registro-obra/contrato": "workspace:*",
+    "@registro-obra/informes": "workspace:*",
     "fastify": "5.2.1",
     "jose": "5.9.6",
     "pg": "8.13.1",

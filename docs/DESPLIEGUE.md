@@ -7,7 +7,7 @@ Opción elegida: fotos y PDF en SharePoint de la organización; base de datos en
 | Fotos e informes PDF | SharePoint (Microsoft 365 de la organización) | incluido |
 | Base de datos | Neon, plan Free (0,5 GB: alcanza para años de textos) | 0 USD |
 | API | Render, plan Free (se duerme sin uso; el primer pedido tarda unos 30 a 60 s) | 0 USD; 7 USD/mes para que no se duerma |
-| Panel web | Lo define el módulo web (Vercel o Render, plan gratuito) | 0 USD |
+| Panel web | Render, plan Free (mismo blueprint) | 0 USD |
 
 ## 1. SharePoint (lo hace quien administra Microsoft 365)
 
@@ -34,13 +34,14 @@ Datos que salen de acá: id de inquilino (tenant), id de cliente, secreto (solo 
    - `EDITOR_CLAVE`: tu contraseña inicial de editor (después la cambiás desde la app).
 3. En GitHub > Actions > "Base de datos" > Run workflow, con "Carga inicial" marcado. Crea las tablas, tu usuario editor y la obra ODD - Fundaciones.
 
-## 3. Render (API)
+## 3. Render (API y panel web)
 
 1. Crear cuenta en [render.com](https://render.com) entrando con GitHub, y New > Blueprint > repositorio `avanceobra`. Toma `render.yaml`.
 2. Cargar las variables que pide:
    - `DATABASE_URL`: la misma cadena de Neon pero con el usuario `avance_api` y la contraseña `AVANCE_API_CLAVE`.
    - `API_URL_PUBLICA`: la URL que Render le da al servicio (por ejemplo `https://avance-obra-api.onrender.com`).
    - `MS_TENANT_ID`, `MS_CLIENT_ID`, `MS_CLIENT_SECRET`, `SHAREPOINT_SITIO`: los del paso 1.
+   - En `avance-obra-web`, `API_URL_INTERNA`: la misma URL de la API. La dirección del panel es la que Render le da a `avance-obra-web`.
 3. Cada push a `main` despliega solo. `https://…/salud` responde `{"ok":true}` cuando está andando.
 
 ## 4. Primer uso

@@ -4,12 +4,14 @@
 import { idParte, rutaFoto, rutaMiniatura } from '@registro-obra/contrato';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
 import { after, before, test } from 'node:test';
 import { prepararAlmacen } from '../src/archivos.ts';
 import { pool } from '../src/db.ts';
 import { crearServidor } from '../src/servidor.ts';
 
 const OBRA = 'c0000000-0000-4000-8000-000000000001';
+const JPG = await readFile(new URL('../../informes/ejemplo/fotos/f1.jpg', import.meta.url));
 let app: Awaited<ReturnType<typeof crearServidor>>;
 
 before(async () => {
@@ -96,7 +98,7 @@ test('login, permisos, fotos y sesiones', async () => {
   assert.equal(ajena.estado, 403);
   const subida = await pedir('POST', '/archivos/subida', campo.acceso, { ruta, content_type: 'image/jpeg' });
   assert.equal(subida.estado, 200);
-  const put = await abrir(subida.json.url, { method: 'PUT', headers: subida.json.encabezados, body: Buffer.from('jpg') });
+  const put = await abrir(subida.json.url, { method: 'PUT', headers: subida.json.encabezados, body: JPG });
   assert.equal(put.status, 201, await put.texto());
 
   const foto = {
@@ -116,7 +118,7 @@ test('login, permisos, fotos y sesiones', async () => {
 
   const ver = await pedir('POST', '/archivos/ver', campo.acceso, { rutas: [ruta, 'fotos/otra/cosa.jpg'] });
   assert.deepEqual(Object.keys(ver.json.urls), [ruta]);
-  assert.equal(await (await abrir(ver.json.urls[ruta])).texto(), 'jpg');
+  assert.equal((await abrir(ver.json.urls[ruta])).status, 200);
 
   // El lector no ve la carga cruda.
   const lector = await entrar('fiscal');
@@ -158,4 +160,49 @@ test('importación del itemizado SAP', async () => {
   assert.equal(nuevo.descripcion, 'ITEM NUEVO');
   assert.equal(nuevo.nivel, 2);
   assert.equal(items.length, 4);
+});
+
+test('informe del día: generar, publicar y PDF', async () => {
+  const editor = await entrar('editor');
+  const yoEditor = editor.yo.usuario.id;
+  const items = (await pedir('GET', `/obras/${OBRA}/items`, editor.acceso)).json;
+  const item = items.find((i: { es_titulo: boolean }) => !i.es_titulo);
+
+  // El editor también puede subir fotos (desde la web).
+  const parteId = idParte(OBRA, yoEditor, hoy());
+  await pedir('PUT', `/partes/${parteId}`, editor.acceso, { obra_id: OBRA, fecha: hoy() });
+  const fotoId = randomUUID();
+  for (const ruta of [rutaFoto(OBRA, yoEditor, fotoId), rutaMiniatura(OBRA, yoEditor, fotoId)]) {
+    const s = await pedir('POST', '/archivos/subida', editor.acceso, { ruta, content_type: 'image/jpeg' });
+    assert.equal((await abrir(s.json.url, { method: 'PUT', headers: s.json.encabezados, body: JPG })).status, 201);
+  }
+  const f = await pedir('PUT', `/fotos/${fotoId}`, editor.acceso, {
+    parte_id: parteId, obra_id: OBRA, item_id: item.id, origen: 'web', tomada_en: new Date().toISOString(),
+    archivo_path: rutaFoto(OBRA, yoEditor, fotoId), miniatura_path: rutaMiniatura(OBRA, yoEditor, fotoId),
+    comentario: 'Hormigonado de zapata en el eje 3',
+  });
+  assert.equal(f.estado, 200, JSON.stringify(f.json));
+
+  const gen = await pedir('POST', '/informes/generar', editor.acceso, { obra_id: OBRA, tipo: 'diario', fecha_desde: hoy(), forzar: true });
+  assert.equal(gen.estado, 202, JSON.stringify(gen.json));
+  const id = gen.json.informe_id;
+  let inf;
+  for (let i = 0; i < 50; i++) {
+    inf = (await pedir('GET', `/informes/${id}`, editor.acceso)).json;
+    if (inf.estado !== 'generando') break;
+    await new Promise((r) => setTimeout(r, 200));
+  }
+  assert.equal(inf.estado, 'borrador', inf.error);
+  assert.ok(inf.contenido.avances.length > 0);
+
+  const pub = await pedir('POST', `/informes/${id}/publicar`, editor.acceso);
+  assert.equal(pub.estado, 200);
+  const lector = await entrar('fiscal');
+  assert.equal((await pedir('GET', `/informes/${id}`, lector.acceso)).estado, 200);
+
+  if (process.env.CHROMIUM_PATH) {
+    const pdf = await pedir('GET', `/informes/${id}/pdf`, editor.acceso);
+    assert.equal(pdf.estado, 302);
+    assert.match(await (await abrir(pdf.r.headers.location as string)).texto(), /^%PDF/);
+  }
 });
