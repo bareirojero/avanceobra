@@ -9,6 +9,7 @@ import { useDia, useEquipo, useInforme, useItems, useObra, useSectores, useUrls 
 import { fechaNumerica, hora } from "@/lib/formato";
 import { ChipEstado, Vacio } from "@/components/ui";
 import { DocumentoInforme, type Seleccion } from "@/components/documento-informe";
+import { VisorFotos } from "@/components/visor-fotos";
 
 const ALERTA: Record<Alerta["tipo"], { titulo: string; clase: string }> = {
   contradiccion: { titulo: "No coinciden.", clase: "bg-pendiente-suave text-[#6E3207]" },
@@ -31,6 +32,7 @@ export default function InformeDelDia() {
   const urls = useUrls(dia.fotos.map((f) => f.archivo_path));
   const minis = useUrls(dia.fotos.map((f) => f.miniatura_path));
   const [seleccion, setSeleccion] = useState<Seleccion>(null);
+  const [visor, setVisor] = useState<number | null>(null);
   const [error, setError] = useState<string>();
   const [ocupado, setOcupado] = useState(false);
 
@@ -145,6 +147,16 @@ export default function InformeDelDia() {
   const publicado = informe.estado === "publicado";
   const numero = numeroInforme(obra.sigla, informe.numero);
   const datos = { obra, numero, fecha, contenido: borrador, fotos: dia.fotos, anotaciones: dia.anotaciones, items, sectores, nombre, urls };
+  // Fotos del informe en el orden en que aparecen, para el visor.
+  const fotosInforme = borrador.avances.flatMap((a) =>
+    a.fotos.flatMap((fi) => {
+      const foto = dia.fotos.find((f) => f.id === fi.foto_id);
+      const it = items.find((i) => i.id === a.item_id);
+      return foto
+        ? [{ foto, src: urls[foto.archivo_path], anotaciones: dia.anotaciones.filter((x) => x.foto_id === foto.id), autor: nombre(foto.autor_id), detalle: it?.numero ? `${it.numero} · ${a.titulo}` : a.titulo }]
+        : [];
+    }),
+  );
   const avanceSel = seleccion?.tipo === "avance" ? borrador.avances.find((a) => a.id === seleccion.id) : undefined;
   const fuentes = avanceSel ? dia.fotos.filter((f) => avanceSel.fuentes.foto_ids.includes(f.id) || avanceSel.fotos.some((x) => x.foto_id === f.id)) : [];
 
@@ -190,7 +202,15 @@ export default function InformeDelDia() {
 
       <div className="flex flex-1 flex-wrap items-start gap-7 px-4 py-7 md:px-8">
         <div className="min-w-0 max-w-[860px] flex-[999_1_560px] overflow-hidden rounded-md shadow-sm">
-          <DocumentoInforme datos={datos} editable={editor && !publicado} seleccion={seleccion} seleccionar={setSeleccion} cambiar={cambiar} />
+          <DocumentoInforme
+            datos={datos}
+            editable={editor && !publicado}
+            seleccion={seleccion}
+            seleccionar={setSeleccion}
+            cambiar={cambiar}
+            alAbrirFoto={(fotoId) => setVisor(Math.max(0, fotosInforme.findIndex((x) => x.foto.id === fotoId)))}
+          />
+          {visor !== null && <VisorFotos fotos={fotosInforme} inicial={visor} cerrar={() => setVisor(null)} />}
         </div>
 
         {editor && (

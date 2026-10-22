@@ -45,6 +45,7 @@ export const CARGOS: Record<CargoObra, string> = {
   capataz: "Capataz",
   residente: "Residente",
   jefe_obra: "Jefe de obra",
+  oficina_tecnica: "Oficina Técnica",
   fiscal: "Fiscal",
   cliente: "Cliente",
   otro: "Otro",
