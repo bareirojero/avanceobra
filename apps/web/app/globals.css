@@ -1,0 +1,91 @@
+@import "tailwindcss";
+
+/* Valores de packages/ui-tokens (hilo Diseño). El acento se reemplaza por
+   organizaciones.color_primario cuando la marca esté definida. */
+@theme {
+  --color-acento: #ffc20e;
+  --color-sobre-acento: #15181c;
+  --color-acento-suave: #fff6d6;
+  --color-tinta: #15181c;
+  --color-marca-fondo: #0f1f3c; /* azul del logo */
+  --color-tinta-suave: #3d4148;
+  --color-tenue: #4a4e55;
+  --color-tinta-elevada: #2a2e34;
+  --color-sobre-tinta-tenue: #c9cbcf;
+  --color-fondo: #f3f2ee;
+  --color-superficie: #ffffff;
+  --color-borde: #d9d7d0;
+  --color-borde-fuerte: #cfccc4;
+  --color-pista: #e8e6e0;
+  --color-plano: #1d5fd1;
+  --color-plano-suave: #e7eefb;
+  --color-plano-texto: #164aa3;
+  --color-ok: #1e7a4f;
+  --color-ok-suave: #e3f1ea;
+  --color-ok-texto: #155c3b;
+  --color-pendiente: #b4540a;
+  --color-pendiente-suave: #fbebdd;
+  --color-pendiente-texto: #8f420a;
+  --color-peligro: #b42318;
+  --color-peligro-suave: #fbe3e1;
+  --color-peligro-texto: #8e1c13;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-archivo), var(--font-inter), ui-sans-serif, sans-serif;
+}
+
+body {
+  background: var(--color-fondo);
+  color: var(--color-tinta);
+  font-family: var(--font-sans);
+  font-size: 15px;
+}
+
+@utility tarjeta {
+  @apply rounded-[14px] bg-superficie;
+}
+
+@utility titulo {
+  @apply font-display font-extrabold;
+}
+
+@utility boton {
+  @apply inline-flex h-11 items-center justify-center gap-2 rounded-[10px] px-4 text-[15px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+}
+@utility boton-principal {
+  @apply boton bg-acento font-display font-bold text-sobre-acento hover:brightness-95;
+}
+@utility boton-secundario {
+  @apply boton border border-borde-fuerte bg-superficie text-tinta hover:bg-fondo;
+}
+@utility boton-tinta {
+  @apply boton bg-tinta text-white hover:bg-tinta-elevada;
+}
+
+@utility chip {
+  @apply inline-flex h-9 items-center rounded-full border border-borde-fuerte bg-superficie px-3.5 text-sm font-semibold;
+}
+.chip[aria-pressed="true"] {
+  @apply border-tinta bg-tinta text-white;
+}
+
+@utility campo {
+  @apply h-10 w-full rounded-[10px] border border-borde-fuerte bg-superficie px-3 text-[15px] outline-none focus:border-plano focus:ring-2 focus:ring-plano/20;
+}
+textarea.campo {
+  @apply h-auto py-2;
+}
+@utility etiqueta {
+  @apply mb-1 block text-sm font-medium text-tenue;
+}
+@utility sobretitulo {
+  @apply text-sm font-bold uppercase tracking-[0.04em] text-tenue;
+}
+
+@media print {
+  @page {
+    margin: 16mm 14mm;
+  }
+  body {
+    background: white;
+  }
+}
