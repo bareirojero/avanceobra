@@ -51,6 +51,14 @@
         {
           "locationWhenInUsePermission": "La app guarda dónde se sacó cada foto de la obra."
         }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "extraProguardRules": "# WorkManager (tareas en segundo plano) crea su base Room por reflexión: R8 no debe borrarla ni renombrarla.\n-keep class androidx.work.** { *; }\n-keep class * extends androidx.room.RoomDatabase { <init>(); }\n-keep class androidx.room.** { *; }\n"
+          }
+        }
       ]
     ],
     "experiments": {
