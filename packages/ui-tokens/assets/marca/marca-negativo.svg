@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 925 827" width="925" height="827" role="img" aria-label="Avance de Obra"><title>Avance de Obra</title><defs><mask id="hneg" maskUnits="userSpaceOnUse" x="0" y="0" width="2048" height="2048">
+<rect width="2048" height="2048" fill="#fff"/>
+<g stroke="#000" stroke-width="26" stroke-linecap="round"><path d="M836,880 L852,1078"/><path d="M1074,880 L1058,1078"/></g>
+<path d="M875,1312 C1060,1290 1200,1160 1280,912 L1210,890 L1415,760 L1440,1005 L1375,965 C1290,1150 1170,1280 1045,1312 Z" fill="#000" stroke="#000" stroke-width="36" stroke-linejoin="round"/>
+</mask>
+<mask id="gneg" maskUnits="userSpaceOnUse" x="0" y="0" width="2048" height="2048">
+<rect width="2048" height="2048" fill="#fff"/>
+<g fill="#000" stroke="#000" stroke-width="44" stroke-linejoin="round"><path d="M605,1228 C605,1020 760,880 955,878 C1150,880 1300,1020 1305,1228 Z"/><path d="M593,1225 H1319 A38,38 0 0 1 1357,1263 V1274 A38,38 0 0 1 1319,1312 H593 A38,38 0 0 1 555,1274 V1263 A38,38 0 0 1 593,1225 Z"/><path d="M862,1080 L848,880 Q848,833 900,833 L1010,833 Q1062,833 1062,880 L1048,1080 Q1046,1100 1030,1100 L880,1100 Q864,1100 862,1080 Z"/><path d="M875,1312 C1060,1290 1200,1160 1280,912 L1210,890 L1415,760 L1440,1005 L1375,965 C1290,1150 1170,1280 1045,1312 Z"/></g>
+</mask></defs><g transform="translate(-535,-505)"><g mask="url(#gneg)" stroke="#C4C5C7" stroke-opacity="1" stroke-width="6" stroke-linecap="round" fill="none"><path d="M645,765 V1010"/><path d="M885,525 V800"/><path d="M1097,585 V870"/><path d="M1338,585 V1195"/><path d="M583,880 H1185"/><path d="M823,705 H1400"/></g>
+<g mask="url(#hneg)" fill="#FEC502"><path d="M605,1228 C605,1020 760,880 955,878 C1150,880 1300,1020 1305,1228 Z"/><path d="M593,1225 H1319 A38,38 0 0 1 1357,1263 V1274 A38,38 0 0 1 1319,1312 H593 A38,38 0 0 1 555,1274 V1263 A38,38 0 0 1 593,1225 Z"/><path d="M862,1080 L848,880 Q848,833 900,833 L1010,833 Q1062,833 1062,880 L1048,1080 Q1046,1100 1030,1100 L880,1100 Q864,1100 862,1080 Z"/></g>
+<path d="M875,1312 C1060,1290 1200,1160 1280,912 L1210,890 L1415,760 L1440,1005 L1375,965 C1290,1150 1170,1280 1045,1312 Z" fill="#22D071"/></g></svg>

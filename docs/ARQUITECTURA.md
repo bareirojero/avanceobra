@@ -27,7 +27,7 @@ apps/campo         App de campo (Expo / React Native, Android)
 apps/web           Panel web del editor (Next.js)
 services/api       API: autenticación, datos, archivos, informes y PDF
 packages/contrato  Tipos compartidos y contrato de la API
-packages/ui-tokens Colores, tipografía y espaciado
+packages/ui-tokens Colores, tipografía, espaciado y logos (docs/DISENO.md)
 db/                Migraciones SQL, datos de prueba y script de migración
 infra/             Infraestructura de Azure (Bicep) y despliegue
 docs/              Esta documentación
