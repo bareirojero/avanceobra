@@ -21,7 +21,8 @@ import { almacenSeguro } from './sesion-segura';
 const CLAVE_ACCESO = 'ao.acceso';
 const CLAVE_RENOVACION = 'ao.renovacion';
 const CLAVE_SESION = 'ao.sesion';
-const ESPERA_MS = 30_000;
+// Generoso: el servidor gratuito se duerme y el primer pedido del día puede tardar un minuto.
+const ESPERA_MS = 90_000;
 
 let oyenteVencida: (() => void) | null = null;
 
