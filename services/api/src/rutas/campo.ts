@@ -190,11 +190,11 @@ export async function rutasCampo(app: FastifyInstance) {
       q(`select puedo_cargar($1) as ok`, [m[1]]),
     );
     if (!ok) throw sinPermiso();
-    const { url, vence } = await urlSubida(ruta);
+    const { url, vence, encabezados } = await urlSubida(ruta);
     return {
       url,
       metodo: 'PUT',
-      encabezados: { 'x-ms-blob-type': 'BlockBlob', 'content-type': 'image/jpeg' },
+      encabezados,
       vence_en: vence.toISOString(),
     };
   });

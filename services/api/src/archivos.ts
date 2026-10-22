@@ -1,9 +1,10 @@
-// Almacenamiento de fotos e informes. Dos destinos, elegidos con ALMACEN:
-//   sharepoint: una carpeta de SharePoint/OneDrive vía Microsoft Graph (producción)
+// Almacenamiento de fotos e informes. Destinos, elegidos con ALMACEN:
+//   s3:         Cloudflare R2 o cualquier almacenamiento compatible con S3
+//   sharepoint: una carpeta de SharePoint/OneDrive vía Microsoft Graph
 //   azure:      Azure Blob Storage (Azurite en desarrollo)
-// Los clientes siempre reciben URLs firmadas de corta duración. Con SharePoint
-// esas URLs apuntan a la API (/api/archivos/datos/:token), que pasa los bytes a
-// Graph; con Azure apuntan directo al blob (SAS).
+// Los clientes siempre reciben URLs firmadas de corta duración. Con S3 y Azure
+// apuntan directo al almacenamiento; con SharePoint apuntan a la API
+// (/api/archivos/datos/:token), que pasa los bytes a Graph.
 
 import {
   BlobSASPermissions,
@@ -11,12 +12,16 @@ import {
   generateBlobSASQueryParameters,
   StorageSharedKeyCredential,
 } from '@azure/storage-blob';
+import { GetObjectCommand, HeadBucketCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { SignJWT, jwtVerify } from 'jose';
 import { config } from './config.ts';
 
 export interface UrlFirmada {
   url: string;
   vence: Date;
+  /** Encabezados que el cliente debe mandar con el PUT (solo en subidas). */
+  encabezados?: Record<string, string>;
 }
 
 interface Destino {
@@ -26,7 +31,37 @@ interface Destino {
   /** URL directa de lectura (Graph o SAS). */
   urlLecturaDirecta(ruta: string, minutos: number): Promise<string>;
   /** URL directa de subida, o null si la subida pasa por la API. */
-  urlSubidaDirecta(ruta: string, minutos: number): string | null;
+  urlSubidaDirecta(ruta: string, minutos: number): Promise<string | null>;
+}
+
+// --- S3 (Cloudflare R2) ---
+
+function destinoS3(): Destino {
+  const c = config.s3!;
+  const cliente = new S3Client({
+    region: c.region,
+    endpoint: c.endpoint,
+    forcePathStyle: true,
+    credentials: { accessKeyId: c.accessKeyId, secretAccessKey: c.secretAccessKey },
+  });
+  return {
+    preparar: async () => {
+      await cliente.send(new HeadBucketCommand({ Bucket: c.bucket }));
+    },
+    leer: async (ruta) => {
+      const r = await cliente.send(new GetObjectCommand({ Bucket: c.bucket, Key: ruta }));
+      return Buffer.from(await r.Body!.transformToByteArray());
+    },
+    guardar: async (ruta, datos, contentType) => {
+      await cliente.send(new PutObjectCommand({ Bucket: c.bucket, Key: ruta, Body: datos, ContentType: contentType }));
+    },
+    urlLecturaDirecta: (ruta, minutos) =>
+      getSignedUrl(cliente, new GetObjectCommand({ Bucket: c.bucket, Key: ruta }), { expiresIn: minutos * 60 }),
+    urlSubidaDirecta: (ruta, minutos) =>
+      getSignedUrl(cliente, new PutObjectCommand({ Bucket: c.bucket, Key: ruta, ContentType: 'image/jpeg' }), {
+        expiresIn: minutos * 60,
+      }),
+  };
 }
 
 // --- Azure Blob Storage ---
@@ -57,7 +92,7 @@ function destinoAzure(): Destino {
       await contenedor.getBlockBlobClient(ruta).uploadData(datos, { blobHTTPHeaders: { blobContentType: contentType } });
     },
     urlLecturaDirecta: async (ruta, minutos) => firmar(ruta, 'r', minutos),
-    urlSubidaDirecta: (ruta, minutos) => firmar(ruta, 'cw', minutos),
+    urlSubidaDirecta: async (ruta, minutos) => firmar(ruta, 'cw', minutos),
   };
 }
 
@@ -122,11 +157,12 @@ function destinoSharePoint(): Destino {
       const j = (await (await graph(`${await item(ruta)}?$select=@microsoft.graph.downloadUrl`)).json()) as Record<string, string>;
       return j['@microsoft.graph.downloadUrl'];
     },
-    urlSubidaDirecta: () => null,
+    urlSubidaDirecta: async () => null,
   };
 }
 
-const destino = config.almacen === 'sharepoint' ? destinoSharePoint() : destinoAzure();
+const destino =
+  config.almacen === 's3' ? destinoS3() : config.almacen === 'sharepoint' ? destinoSharePoint() : destinoAzure();
 
 // --- URLs que ven los clientes ---
 
@@ -151,8 +187,10 @@ const viaApi = (token: string) => `${config.urlPublica}/api/archivos/datos/${tok
 export async function urlSubida(ruta: string): Promise<UrlFirmada> {
   const minutos = 15;
   const vence = new Date(Date.now() + minutos * 60_000);
-  const directa = config.viaApi ? null : destino.urlSubidaDirecta(ruta, minutos);
-  return { url: directa ?? viaApi(await tokenArchivo(ruta, 'w', minutos)), vence };
+  const directa = config.viaApi ? null : await destino.urlSubidaDirecta(ruta, minutos);
+  const encabezados: Record<string, string> = { 'content-type': 'image/jpeg' };
+  if (directa && config.almacen === 'azure') encabezados['x-ms-blob-type'] = 'BlockBlob';
+  return { url: directa ?? viaApi(await tokenArchivo(ruta, 'w', minutos)), vence, encabezados };
 }
 
 export async function urlLectura(ruta: string): Promise<UrlFirmada> {

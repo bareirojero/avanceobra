@@ -7,7 +7,7 @@ function requerida(nombre: string): string {
   return valor;
 }
 
-const almacen = (process.env.ALMACEN ?? 'azure') as 'azure' | 'sharepoint';
+const almacen = (process.env.ALMACEN ?? 'azure') as 'azure' | 'sharepoint' | 's3';
 
 export const config = {
   puerto: Number(process.env.PORT ?? process.env.PUERTO ?? 8080),
@@ -20,6 +20,16 @@ export const config = {
   viaApi: almacen === 'sharepoint' || process.env.ALMACEN_VIA_API === '1',
   storageConexion: almacen === 'azure' ? requerida('AZURE_STORAGE_CONNECTION_STRING') : undefined,
   storageContenedor: process.env.AZURE_STORAGE_CONTAINER ?? 'avance-obra',
+  s3:
+    almacen === 's3'
+      ? {
+          endpoint: requerida('S3_ENDPOINT'), // R2: https://<cuenta>.r2.cloudflarestorage.com
+          region: process.env.S3_REGION ?? 'auto',
+          bucket: requerida('S3_BUCKET'),
+          accessKeyId: requerida('S3_ACCESS_KEY_ID'),
+          secretAccessKey: requerida('S3_SECRET_ACCESS_KEY'),
+        }
+      : undefined,
   sharepoint:
     almacen === 'sharepoint'
       ? {

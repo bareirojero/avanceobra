@@ -14,22 +14,23 @@ services:
       - key: NODE_ENV
         value: production
       - key: ALMACEN
-        value: sharepoint
-      - key: SHAREPOINT_CARPETA
-        value: Avance de Obra/datos
+        value: s3
+      - key: S3_REGION
+        value: auto
       - key: JWT_SECRETO
         generateValue: true
       - key: DATABASE_URL
         sync: false
       - key: API_URL_PUBLICA
         sync: false
-      - key: MS_TENANT_ID
+      # Cloudflare R2 (ver docs/DESPLIEGUE.md, paso 1)
+      - key: S3_ENDPOINT
         sync: false
-      - key: MS_CLIENT_ID
+      - key: S3_BUCKET
         sync: false
-      - key: MS_CLIENT_SECRET
+      - key: S3_ACCESS_KEY_ID
         sync: false
-      - key: SHAREPOINT_SITIO
+      - key: S3_SECRET_ACCESS_KEY
         sync: false
 
   # Panel web (apps/web). API_URL_INTERNA se lee al compilar: cargala antes del

@@ -12,13 +12,13 @@
  │ importación del itemizado · usuarios · informes con IA · PDF (Chromium)│
  └───────────┬───────────────────────────┬───────────────────────┬──────┘
              ▼                           ▼
-   PostgreSQL 16 (Neon)        SharePoint (Microsoft 365)
+   PostgreSQL 16 (Neon)        Cloudflare R2 (privado)
    datos y permisos            fotos e informes PDF
 ```
 
-Producción (detalle y pasos en [DESPLIEGUE.md](DESPLIEGUE.md)): fotos y PDF en una carpeta de SharePoint de la organización (Microsoft Graph, permiso solo sobre ese sitio), base en Neon y API en Render, en planes gratuitos. GitHub guarda solo código: ningún dato de obra, clave ni contraseña.
+Producción (detalle y pasos en [DESPLIEGUE.md](DESPLIEGUE.md)): fotos y PDF en un bucket privado de Cloudflare R2 (compatible con S3), base en Neon y API en Render, en planes gratuitos. GitHub guarda solo código: ningún dato de obra, clave ni contraseña.
 
-El almacenamiento es intercambiable (`ALMACEN=sharepoint` o `azure`); en desarrollo local se usa Azurite. `docker compose up -d` levanta Postgres 16 y Azurite.
+El almacenamiento es intercambiable (`ALMACEN=s3`, `sharepoint` o `azure`); en desarrollo local se usa Azurite. `docker compose up -d` levanta Postgres 16 y Azurite.
 
 ## Repositorio
 
@@ -29,7 +29,7 @@ services/api       API: autenticación, datos, archivos, informes y PDF
 packages/contrato  Tipos compartidos y contrato de la API
 packages/ui-tokens Colores, tipografía y espaciado
 db/                Migraciones SQL, datos de prueba y script de migración
-infra/             Infraestructura de Azure (Bicep) y despliegue
+infra/             Plantillas de Azure (alternativa, sin usar)
 docs/              Esta documentación
 ```
 
@@ -76,8 +76,8 @@ Las reglas viven en la base (RLS). La API se conecta con el rol `avance_api`, qu
 
 ## Fotos y archivos
 
-- Carpeta de SharePoint (`Avance de Obra/datos`). Rutas: `fotos/{obra}/{autor}/{foto}.jpg`, `…_mini.jpg` y `informes/{obra}/{informe}.pdf`.
-- La API entrega URLs firmadas de corta duración: de escritura (15 min) solo para la carpeta propia y de lectura (1 h) solo si el usuario puede ver esa obra. Con SharePoint la URL apunta a `/api/archivos/datos/:token` (la API pasa los bytes a Graph y, para leer, redirige al enlace de descarga temporal de Graph); con Azure, directo al blob.
+- Bucket `avance-obra` en R2. Rutas: `fotos/{obra}/{autor}/{foto}.jpg`, `…_mini.jpg` y `informes/{obra}/{informe}.pdf`.
+- La API entrega URLs firmadas de corta duración: de escritura (15 min) solo para la carpeta propia y de lectura (1 h) solo si el usuario puede ver esa obra. Con R2 (y Azure) son URLs prefirmadas directo al almacenamiento; con SharePoint apuntan a `/api/archivos/datos/:token` (la API pasa los bytes a Graph). El cliente sube con `PUT` y los `encabezados` que devuelve `POST /api/archivos/subida`, y acepta cualquier 2xx.
 - El teléfono comprime antes de subir (lado mayor 2048 px, JPEG 0,8) y genera la miniatura de 400 px.
 
 ## Sincronización offline
@@ -89,7 +89,7 @@ Las reglas viven en la base (RLS). La API se conecta con el rol `avance_api`, qu
 ## Informes
 
 - `POST /api/informes/generar` crea el informe en `generando`, junta las fotos, anotaciones y comentarios del período, el clima y el personal que cargó el editor, arma el borrador (sin IA por ahora; el módulo admite sumar un proveedor más adelante) y lo deja en `borrador`.
-- El editor corrige `contenido` en el panel y publica. El PDF se arma con Chromium desde el mismo HTML de la vista previa y se guarda en Blob Storage. Solo PDF.
+- El editor corrige `contenido` en el panel y publica. El PDF se arma con Chromium desde el mismo HTML de la vista previa y se guarda en el almacenamiento. Solo PDF.
 - Semanales y mensuales (más adelante): resumen de los diarios publicados del período, usando `informe_fotos`.
 
 ## Cambios al esquema

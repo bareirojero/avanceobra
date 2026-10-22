@@ -99,7 +99,7 @@ test('login, permisos, fotos y sesiones', async () => {
   const subida = await pedir('POST', '/archivos/subida', campo.acceso, { ruta, content_type: 'image/jpeg' });
   assert.equal(subida.estado, 200);
   const put = await abrir(subida.json.url, { method: 'PUT', headers: subida.json.encabezados, body: JPG });
-  assert.equal(put.status, 201, await put.texto());
+  assert.ok(put.status >= 200 && put.status < 300, await put.texto()); // Azure 201, S3/R2 200
 
   const foto = {
     parte_id: parteId, obra_id: OBRA, item_id: item.id, tomada_en: new Date().toISOString(),
@@ -174,7 +174,8 @@ test('informe del día: generar, publicar y PDF', async () => {
   const fotoId = randomUUID();
   for (const ruta of [rutaFoto(OBRA, yoEditor, fotoId), rutaMiniatura(OBRA, yoEditor, fotoId)]) {
     const s = await pedir('POST', '/archivos/subida', editor.acceso, { ruta, content_type: 'image/jpeg' });
-    assert.equal((await abrir(s.json.url, { method: 'PUT', headers: s.json.encabezados, body: JPG })).status, 201);
+    const { status } = await abrir(s.json.url, { method: 'PUT', headers: s.json.encabezados, body: JPG });
+    assert.ok(status >= 200 && status < 300);
   }
   const f = await pedir('PUT', `/fotos/${fotoId}`, editor.acceso, {
     parte_id: parteId, obra_id: OBRA, item_id: item.id, origen: 'web', tomada_en: new Date().toISOString(),
