@@ -1,0 +1,64 @@
+name: App de campo
+
+# Verifica la app y arma el APK para instalar en los teléfonos (también en los PR, para
+# probar antes de unir). El APK queda como artefacto de la corrida: Actions > la corrida >
+# Artifacts.
+on:
+  workflow_dispatch:
+  pull_request:
+    paths: ['apps/campo/**', 'packages/**', 'pnpm-lock.yaml', '.github/workflows/app-campo.yml']
+  push:
+    branches: [main]
+    paths: ['apps/campo/**', 'packages/**', 'pnpm-lock.yaml', '.github/workflows/app-campo.yml']
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/campo
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec tsc --noEmit
+      - run: pnpm exec jest
+      - run: pnpm exec expo lint
+
+  apk:
+    needs: verificar
+    runs-on: ubuntu-latest
+    env:
+      # Dirección pública de la API (no es un secreto), variable del repositorio
+      # API_URL, ej. https://avance-obra.ejemplo.com/api. Sin ella la app sale en modo demo.
+      EXPO_PUBLIC_API_URL: ${{ vars.API_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+      - run: pnpm install --frozen-lockfile
+      - name: Generar proyecto Android
+        working-directory: apps/campo
+        run: pnpm exec expo prebuild --platform android --no-install
+      - name: Armar APK
+        working-directory: apps/campo/android
+        # Firmado con la clave de depuración: sirve para instalar a mano (APK directo).
+        # Para Play Store hace falta una clave propia guardada como secreto.
+        run: ./gradlew assembleRelease --no-daemon
+      - uses: actions/upload-artifact@v4
+        with:
+          name: avance-de-obra-${{ github.run_number }}
+          path: apps/campo/android/app/build/outputs/apk/release/app-release.apk
+          retention-days: 30
