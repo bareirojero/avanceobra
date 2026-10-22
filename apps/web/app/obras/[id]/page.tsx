@@ -215,6 +215,8 @@ function BotonInforme({
             });
           alGenerar();
           router.push(enlace);
+        } catch (e) {
+          alert(`No se pudo armar el informe: ${e instanceof Error ? e.message : "error desconocido"}`);
         } finally {
           setArmando(false);
         }

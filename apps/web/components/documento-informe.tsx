@@ -84,14 +84,14 @@ export function DocumentoInforme({
 
   return (
     <article className="flex flex-col gap-4 bg-white px-6 py-10 font-[Arial,Helvetica,sans-serif] text-[14px] leading-[1.45] text-tinta sm:px-12">
-      <header className="flex flex-wrap items-end justify-between gap-4 border-b-2 border-tinta pb-3">
+      <header className="flex flex-wrap items-end justify-between gap-4 border-b-2 border-tinta pb-3 md:flex-nowrap">
         <div>
           <div className="text-[11px] font-bold tracking-wide">
-            TECNOEDIL <span className="font-normal text-tenue">· INFORME DIARIO DE OBRA</span>
+            TECNOEDIL S.A. CONSTRUCTORA <span className="font-normal text-tenue">· INFORME DIARIO DE OBRA</span>
           </div>
           <h1 className="mt-1 text-[24px] font-bold leading-tight">
             Obra: {obra.codigo ? `${obra.codigo} – ` : ""}
-            {obra.nombre.toUpperCase()}
+            {obra.nombre}
           </h1>
         </div>
         <div className="flex items-center gap-3 border-2 border-tinta py-1.5 pl-1.5 pr-3">

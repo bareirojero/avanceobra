@@ -24,7 +24,7 @@ export function BarraLateral() {
           ? [
               { href: `${base}/items`, texto: "Itemizado", icono: ListChecks, activo: ruta.startsWith(`${base}/items`) },
               { href: `${base}/usuarios`, texto: "Usuarios", icono: Users, activo: ruta.startsWith(`${base}/usuarios`) },
-              { href: `${base}/datos`, texto: "Obra", icono: Settings, activo: ruta.startsWith(`${base}/datos`) },
+              { href: `${base}/obra`, texto: "Obra", icono: Settings, activo: ruta.startsWith(`${base}/obra`) },
             ]
           : []),
       ];

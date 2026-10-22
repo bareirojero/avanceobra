@@ -21,7 +21,11 @@ async function comprimir(bmp: ImageBitmap, lado: number, calidad: number) {
 
 async function subirArchivo(ruta: string, blob: Blob) {
   const s = await api.subida(ruta);
-  const r = await fetch(s.url, { method: s.metodo, headers: { ...s.encabezados, "content-type": "image/jpeg" }, body: blob });
+  // Con SharePoint la URL apunta a la API (/api/archivos/datos/…): se usa la ruta
+  // relativa para pasar por el mismo origen y evitar CORS.
+  const u = new URL(s.url, location.href);
+  const destino = u.pathname.startsWith("/api/archivos/datos/") ? u.pathname + u.search : s.url;
+  const r = await fetch(destino, { method: s.metodo, headers: { ...s.encabezados, "content-type": "image/jpeg" }, body: blob });
   if (!r.ok) throw new Error(`No se pudo subir la foto (${r.status})`);
 }
 
