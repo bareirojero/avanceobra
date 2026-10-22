@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { fotoAnotada } from "../anotar.ts";
-import { fechaCorta, fechaLarga, rubro, type LeerFoto } from "../generar.ts";
+import { fechaCorta, fechaLarga, horaLocal, rubro, type LeerFoto } from "../generar.ts";
 import type { ContenidoInforme, DatosDelDia } from "../tipos.ts";
 
 /** Colores del sistema de diseño (packages/ui-tokens) y datos fijos del encabezado. */
@@ -83,8 +83,7 @@ export async function armarReferencias(
     foto: (id) => {
       const f = datos.fotos.find((x) => x.id === id);
       if (!f) return undefined;
-      const hora = new Date(f.tomada_en).toLocaleTimeString("es-PY", { hour: "2-digit", minute: "2-digit", timeZone: "America/Asuncion" });
-      return { autor: usuarios.get(f.autor_id) ?? "", hora, comentario: f.comentario };
+      return { autor: usuarios.get(f.autor_id) ?? "", hora: horaLocal(f.tomada_en), comentario: f.comentario };
     },
     imagen: (id) => {
       const b = imagenes.get(id);
