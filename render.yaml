@@ -1,0 +1,47 @@
+# Despliegue en Render (render.com > New > Blueprint > este repositorio).
+# Los valores con sync: false se cargan a mano en Render y nunca están acá.
+services:
+  - type: web
+    name: avance-obra-api
+    runtime: docker
+    dockerfilePath: services/api/Dockerfile
+    dockerContext: .
+    plan: free
+    region: virginia
+    healthCheckPath: /salud
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: ALMACEN
+        value: drive
+      - key: DRIVE_CARPETA
+        value: Avance de Obra
+      - key: JWT_SECRETO
+        generateValue: true
+      - key: DATABASE_URL
+        sync: false
+      - key: API_URL_PUBLICA
+        sync: false
+      # Google Drive (ver docs/DESPLIEGUE.md, paso 1). Para usar S3 (B2 o R2),
+      # ALMACEN=s3 y S3_ENDPOINT, S3_REGION, S3_BUCKET, S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY.
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_REFRESH_TOKEN
+        sync: false
+
+  # Panel web (apps/web). API_URL_INTERNA se lee al compilar: cargala antes del
+  # primer despliegue con la URL de avance-obra-api (ej. https://avance-obra-api.onrender.com).
+  - type: web
+    name: avance-obra-web
+    runtime: node
+    plan: free
+    region: virginia
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm --filter @registro-obra/web build
+    startCommand: pnpm --filter @registro-obra/web start
+    autoDeploy: true
+    envVars:
+      - key: API_URL_INTERNA
+        sync: false

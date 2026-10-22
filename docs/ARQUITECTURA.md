@@ -11,14 +11,14 @@
  │ login y sesiones · permisos (RLS) · sincronización · URLs firmadas    │
  │ importación del itemizado · usuarios · informes con IA · PDF (Chromium)│
  └───────────┬───────────────────────────┬───────────────────────┬──────┘
-             ▼                           ▼                       ▼
-   PostgreSQL 16 (Azure)       Blob Storage (Azure)       API de Claude
-   datos y permisos            fotos e informes PDF       (redacción del informe)
+             ▼                           ▼
+   PostgreSQL 16 (Neon)        Google Drive (carpeta) 
+   datos y permisos            fotos e informes PDF
 ```
 
-Producción en la nube Microsoft de la organización (Azure, región Brazil South): Azure Database for PostgreSQL (servidor flexible), Azure Blob Storage (contenedor privado), Azure Container Apps para la API y la web, y Azure Key Vault para los secretos. GitHub guarda solo código: ningún dato de obra, clave ni contraseña.
+Producción (detalle y pasos en [DESPLIEGUE.md](DESPLIEGUE.md)): fotos y PDF en una carpeta de Google Drive (permiso `drive.file`: la API solo ve lo que crea), base en Neon y API en Render, en planes gratuitos. GitHub guarda solo código: ningún dato de obra, clave ni contraseña.
 
-Desarrollo local: `docker compose up -d` levanta Postgres 16 y Azurite (emulador de Blob Storage).
+El almacenamiento es intercambiable (`ALMACEN=drive`, `s3`, `sharepoint` o `azure`); en desarrollo local se usa Azurite. `docker compose up -d` levanta Postgres 16 y Azurite.
 
 ## Repositorio
 
@@ -29,7 +29,7 @@ services/api       API: autenticación, datos, archivos, informes y PDF
 packages/contrato  Tipos compartidos y contrato de la API
 packages/ui-tokens Colores, tipografía, espaciado y logos (docs/DISENO.md)
 db/                Migraciones SQL, datos de prueba y script de migración
-infra/             Infraestructura de Azure (Bicep) y despliegue
+infra/             Plantillas de Azure (alternativa, sin usar)
 docs/              Esta documentación
 ```
 
@@ -76,8 +76,8 @@ Las reglas viven en la base (RLS). La API se conecta con el rol `avance_api`, qu
 
 ## Fotos y archivos
 
-- Contenedor privado de Blob Storage. Rutas: `fotos/{obra}/{autor}/{foto}.jpg`, `…_mini.jpg` y `informes/{obra}/{informe}.pdf`.
-- La API entrega URLs firmadas de corta duración: de escritura (15 min) solo para la carpeta propia y de lectura (1 h) solo si el usuario puede ver esa obra. Las fotos no pasan por la API.
+- Carpeta `Avance de Obra` de Google Drive, con subcarpetas según la ruta. Rutas: `fotos/{obra}/{autor}/{foto}.jpg`, `…_mini.jpg` y `informes/{obra}/{informe}.pdf`.
+- La API entrega URLs firmadas de corta duración: de escritura (15 min) solo para la carpeta propia y de lectura (1 h) solo si el usuario puede ver esa obra. Con Drive (y SharePoint) apuntan a `/api/archivos/datos/:token` y la API pasa los bytes; con S3 y Azure son URLs prefirmadas directo al almacenamiento. El cliente sube con `PUT` y los `encabezados` que devuelve `POST /api/archivos/subida`, y acepta cualquier 2xx.
 - El teléfono comprime antes de subir (lado mayor 2048 px, JPEG 0,8) y genera la miniatura de 400 px.
 
 ## Sincronización offline
@@ -88,8 +88,8 @@ Las reglas viven en la base (RLS). La API se conecta con el rol `avance_api`, qu
 
 ## Informes
 
-- `POST /api/informes/generar` crea el informe en `generando`, junta las fotos, anotaciones y comentarios del período, el clima y el personal que cargó el editor, llama a Claude y deja el informe en `borrador`.
-- El editor corrige `contenido` en el panel y publica. El PDF se arma con Chromium desde el mismo HTML de la vista previa y se guarda en Blob Storage. Solo PDF.
+- `POST /api/informes/generar` crea el informe en `generando`, junta las fotos, anotaciones y comentarios del período, el clima y el personal que cargó el editor, arma el borrador (sin IA por ahora; el módulo admite sumar un proveedor más adelante) y lo deja en `borrador`.
+- El editor corrige `contenido` en el panel y publica. El PDF se arma con Chromium desde el mismo HTML de la vista previa y se guarda en el almacenamiento. Solo PDF.
 - Semanales y mensuales (más adelante): resumen de los diarios publicados del período, usando `informe_fotos`.
 
 ## Cambios al esquema

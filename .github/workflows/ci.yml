@@ -1,0 +1,57 @@
+name: CI
+on:
+  pull_request:
+  push:
+    branches: [main]
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    services:
+      db:
+        image: postgres:16
+        env:
+          POSTGRES_DB: avance_obra
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: --health-cmd pg_isready --health-interval 5s --health-retries 10
+      blob:
+        image: mcr.microsoft.com/azure-storage/azurite:3.33.0
+        ports: ["10000:10000"]
+    env:
+      DATABASE_ADMIN_URL: postgres://postgres:postgres@localhost:5432/avance_obra
+      DATABASE_URL: postgres://avance_api:avance_api@localhost:5432/avance_obra
+      AZURE_STORAGE_CONNECTION_STRING: UseDevelopmentStorage=true
+      JWT_SECRETO: secreto-de-prueba-para-ci
+      CHROMIUM_PATH: /usr/bin/google-chrome
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm db:seed
+      - run: psql "$DATABASE_ADMIN_URL" -c "alter role avance_api with password 'avance_api'"
+      - run: pnpm --filter @registro-obra/api test
+      - name: Pruebas con archivos a través de la API (como con SharePoint)
+        run: |
+          psql "$DATABASE_ADMIN_URL" -c 'drop schema public cascade; create schema public; drop table if exists schema_migraciones' >/dev/null
+          pnpm db:seed && psql "$DATABASE_ADMIN_URL" -c "alter role avance_api with password 'avance_api'"
+          ALMACEN_VIA_API=1 pnpm --filter @registro-obra/api test
+      - name: Pruebas con almacenamiento S3 (como Cloudflare R2)
+        run: |
+          mkdir -p /tmp/s3 && (npx -y s3rver@3.7.1 -d /tmp/s3 -p 4569 --configure-bucket avance-obra --silent &) && sleep 5
+          psql "$DATABASE_ADMIN_URL" -c 'drop schema public cascade; create schema public; drop table if exists schema_migraciones' >/dev/null
+          pnpm db:seed && psql "$DATABASE_ADMIN_URL" -c "alter role avance_api with password 'avance_api'"
+          ALMACEN=s3 S3_ENDPOINT=http://localhost:4569 S3_BUCKET=avance-obra S3_ACCESS_KEY_ID=S3RVER S3_SECRET_ACCESS_KEY=S3RVER \
+            pnpm --filter @registro-obra/api test
+      - name: Pruebas con Google Drive simulado
+        run: |
+          (node services/api/test/drive-simulado.mjs 4570 &) && sleep 1
+          psql "$DATABASE_ADMIN_URL" -c 'drop schema public cascade; create schema public; drop table if exists schema_migraciones' >/dev/null
+          pnpm db:seed && psql "$DATABASE_ADMIN_URL" -c "alter role avance_api with password 'avance_api'"
+          ALMACEN=drive GOOGLE_CLIENT_ID=c GOOGLE_CLIENT_SECRET=s GOOGLE_REFRESH_TOKEN=r \
+            DRIVE_API_BASE=http://localhost:4570 GOOGLE_TOKEN_URL=http://localhost:4570/token \
+            pnpm --filter @registro-obra/api test
