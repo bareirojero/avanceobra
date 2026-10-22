@@ -24,6 +24,10 @@ on:
       organizacion:
         description: "Nombre de la organización"
         default: "Tecnoedil"
+      reiniciar_clave_editor:
+        description: "Poner al editor la contraseña de EDITOR_CLAVE (si se olvidó)"
+        type: boolean
+        default: false
 concurrency: base-de-datos
 jobs:
   migrar:
@@ -50,4 +54,14 @@ jobs:
           ORG_NOMBRE: ${{ inputs.organizacion }}
           EDITOR_USUARIO: ${{ inputs.editor_usuario }}
           EDITOR_NOMBRE: ${{ inputs.editor_nombre }}
+          EDITOR_CLAVE: ${{ secrets.EDITOR_CLAVE }}
+      - name: Reiniciar la contraseña del editor
+        if: ${{ inputs.reiniciar_clave_editor }}
+        run: |
+          psql "$DATABASE_ADMIN_URL" -v ON_ERROR_STOP=1 -v usuario="$EDITOR_USUARIO" -v clave="$EDITOR_CLAVE" <<'SQL' | grep -q 'UPDATE 1'
+          update usuarios set clave_hash = crypt(:'clave', gen_salt('bf', 10)), version_sesion = version_sesion + 1
+           where usuario = lower(:'usuario');
+          SQL
+        env:
+          EDITOR_USUARIO: ${{ inputs.editor_usuario }}
           EDITOR_CLAVE: ${{ secrets.EDITOR_CLAVE }}
