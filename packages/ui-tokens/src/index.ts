@@ -1,39 +1,43 @@
 // Tokens de diseño compartidos por apps/campo (Expo) y apps/web (Next.js).
-// Fuente visual: canvas "Registro de obra · Diseño" (hilo Diseño visual y experiencia).
+// Fuente visual: lienzo "Avance de Obra · Diseño" (hilo Diseño visual y experiencia).
 
 export const color = {
+  // Marca "Avance de Obra" (sale del logo): azul marino, amarillo casco y verde avance.
+  brandNavy: '#112037',
+  brandYellow: '#FEC502',
+  brandGreen: '#22D071', // solo sobre fondo oscuro o como relleno; para texto usar okText
+
   // Acción principal y marcas sobre la foto. Siempre con texto `onAccent`.
-  // Se reemplaza por organizaciones.color_primario cuando la marca esté definida.
-  accent: '#FFC20E',
-  onAccent: '#15181C',
-  accentSoft: '#FFF6D6', // resaltado de párrafo seleccionado en el informe
+  accent: '#FEC502',
+  onAccent: '#112037',
+  accentSoft: '#FFF4CC', // resaltado de párrafo seleccionado en el informe
 
-  ink: '#15181C', // texto principal, barras, botón secundario
-  inkSoft: '#3D4148', // etiquetas en campo
-  muted: '#4A4E55', // texto secundario (pasa 4.5:1 sobre ground y surface)
-  inkRaised: '#2A2E34', // ítem activo del menú lateral web
+  ink: '#112037', // texto principal, barras, botón secundario (azul marino de la marca)
+  inkSoft: '#36405A', // etiquetas en campo
+  muted: '#4A5469', // texto secundario (pasa 4.5:1 sobre ground y surface)
+  inkRaised: '#1E2D4A', // ítem activo del menú lateral web
   onInk: '#FFFFFF',
-  onInkMuted: '#C9CBCF',
+  onInkMuted: '#C4C9D4',
 
-  ground: '#F3F2EE', // fondo "hormigón"
+  ground: '#F1F2F4', // fondo general
   surface: '#FFFFFF', // tarjetas
-  line: '#D9D7D0',
-  lineStrong: '#CFCCC4', // bordes de botones web
-  track: '#E8E6E0', // fondo de barras de avance
+  line: '#D6DAE1',
+  lineStrong: '#C3C9D3', // bordes de botones web
+  track: '#E4E7EC', // fondo de barras
 
-  plano: '#1D5FD1', // enlaces, selección, avance en web
+  plano: '#1D5FD1', // enlaces y selección en web
   planoSoft: '#E7EEFB',
   planoText: '#164AA3',
 
-  ok: '#1E7A4F',
-  okSoft: '#E3F1EA',
-  okText: '#155C3B',
+  ok: '#1B8A50',
+  okSoft: '#E1F5EA',
+  okText: '#146A3D',
 
   pending: '#B4540A', // esperando señal
   pendingSoft: '#FBEBDD',
   pendingText: '#8F420A',
 
-  danger: '#B42318', // incidente, atraso, error
+  danger: '#B42318', // incidente, error
   dangerSoft: '#FBE3E1',
   dangerText: '#8E1C13',
 } as const;
@@ -44,8 +48,9 @@ export const font = {
 } as const;
 
 // Tamaños en px. Campo nunca baja de 17 en texto que hay que leer.
+// Archivo también es la letra del logotipo (ExtraBold 800).
 export const type = {
-  campo: { hero: 28, title: 24, section: 20, body: 18, label: 15, caption: 13, button: 22, number: 40 },
+  campo: { hero: 28, title: 24, section: 20, body: 18, input: 18, label: 15, caption: 13, button: 22, number: 32 },
   web: { hero: 36, title: 22, section: 18, body: 15, label: 14, caption: 13, button: 15, number: 32 },
 } as const;
 
@@ -78,9 +83,19 @@ export const informeState = {
 } as const;
 
 // Marcas sobre la foto: la seleccionada usa accent, las demás blanco, borde ink.
+// Archivos de logo en packages/ui-tokens/assets/marca (ver el README de esa carpeta).
+// El nombre del producto vive en @registro-obra/contrato (NOMBRE_APP).
+export const logo = {
+  icono: 'avance-obra-icono.svg',
+  logotipoClaro: 'logotipo-positivo.svg',
+  logotipoOscuro: 'logotipo-negativo.svg',
+  marcaBlanca: 'marca-blanco.svg',
+  marcaNegra: 'marca-negro.svg',
+} as const;
+
 export const marca = { size: 40, sizeWeb: 30, border: 3, selected: color.accent, idle: '#FFFFFF', outline: color.ink } as const;
 
-// Texto legible sobre un color de marca cualquiera (por si color_primario es oscuro).
+// Texto legible sobre un color cualquiera (por ejemplo organizaciones.color_primario).
 export function onColor(hex: string): string {
   const n = parseInt(hex.replace('#', ''), 16);
   const lin = (c: number) => {

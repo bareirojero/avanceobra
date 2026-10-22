@@ -1,0 +1,190 @@
+{
+ "obra": {
+  "id": "obra-ejemplo",
+  "codigo": "OC.0000",
+  "nombre": "OBRA DE EJEMPLO",
+  "ubicacion": null,
+  "notas_para_informe": null
+ },
+ "fecha": "2026-10-20",
+ "resumen_dia_anterior": null,
+ "usuarios": [
+  {
+   "id": "u-ramon",
+   "nombre": "Ramón Benítez",
+   "cargo": "capataz"
+  },
+  {
+   "id": "u-laura",
+   "nombre": "Ing. Laura Giménez",
+   "cargo": "residente"
+  }
+ ],
+ "sectores": [],
+ "items": [
+  {
+   "id": "i-OC.0000",
+   "padre_id": null,
+   "codigo": "OC.0000",
+   "numero": null,
+   "descripcion": "Obra de ejemplo",
+   "unidad": null,
+   "es_titulo": true
+  },
+  {
+   "id": "i-OC.0000D003",
+   "padre_id": "i-OC.0000",
+   "codigo": "OC.0000D003",
+   "numero": null,
+   "descripcion": "Cortina de pilotes",
+   "unidad": "UN",
+   "es_titulo": true
+  },
+  {
+   "id": "i-OC.0000D003003",
+   "padre_id": "i-OC.0000D003",
+   "codigo": "OC.0000D003003",
+   "numero": null,
+   "descripcion": "Muros sobre vigas",
+   "unidad": "UN",
+   "es_titulo": true
+  },
+  {
+   "id": "i-OC.0000D00300303",
+   "padre_id": "i-OC.0000D003003",
+   "codigo": "OC.0000D00300303",
+   "numero": "54",
+   "descripcion": "Suministro, montaje y desmontaje de",
+   "unidad": "M2",
+   "es_titulo": false
+  },
+  {
+   "id": "i-OC.0000D00300304",
+   "padre_id": "i-OC.0000D003003",
+   "codigo": "OC.0000D00300304",
+   "numero": "55",
+   "descripcion": "Hormigonado del muro de hormigón arm",
+   "unidad": "M3",
+   "es_titulo": false
+  },
+  {
+   "id": "i-OC.0000D005",
+   "padre_id": "i-OC.0000",
+   "codigo": "OC.0000D005",
+   "numero": null,
+   "descripcion": "Cabezales",
+   "unidad": "UN",
+   "es_titulo": true
+  },
+  {
+   "id": "i-OC.0000D005004",
+   "padre_id": "i-OC.0000D005",
+   "codigo": "OC.0000D005004",
+   "numero": "66",
+   "descripcion": "Hormigón de limpieza c10 (e=5 cm)",
+   "unidad": "M3",
+   "es_titulo": false
+  },
+  {
+   "id": "i-OC.0000D005005",
+   "padre_id": "i-OC.0000D005",
+   "codigo": "OC.0000D005005",
+   "numero": "67",
+   "descripcion": "Encofrado lateral de cabezales",
+   "unidad": "M2",
+   "es_titulo": false,
+   "previsto_en_fecha": true
+  }
+ ],
+ "fotos": [
+  {
+   "id": "f1",
+   "autor_id": "u-laura",
+   "item_id": "i-OC.0000D00300304",
+   "sector_id": null,
+   "tomada_en": "2026-10-20T08:40:00-03:00",
+   "archivo_path": "f1.jpg",
+   "comentario": "Muro eje 4 desencofrado, revisar superficie."
+  },
+  {
+   "id": "f5",
+   "autor_id": "u-laura",
+   "item_id": "i-OC.0000D00300304",
+   "sector_id": null,
+   "tomada_en": "2026-10-20T08:46:00-03:00",
+   "archivo_path": "f5.jpg",
+   "comentario": null
+  },
+  {
+   "id": "f2",
+   "autor_id": "u-ramon",
+   "item_id": "i-OC.0000D00300303",
+   "sector_id": null,
+   "tomada_en": "2026-10-20T10:05:00-03:00",
+   "archivo_path": "f2.jpg",
+   "comentario": "sacando encofrado arriba del muro eje 4, mañana pasamos al eje 5"
+  },
+  {
+   "id": "f3",
+   "autor_id": "u-ramon",
+   "item_id": "i-OC.0000D005004",
+   "sector_id": null,
+   "tomada_en": "2026-10-20T11:10:00-03:00",
+   "archivo_path": "f3.jpg",
+   "comentario": "hormigon de limpiesa para cabezal C12, se coloca a la tarde. falta 1 m3"
+  }
+ ],
+ "anotaciones": [
+  {
+   "id": "a-f1-1",
+   "foto_id": "f1",
+   "numero": 1,
+   "tipo": "circulo",
+   "geometria": {
+    "cx": 0.37,
+    "cy": 0.5,
+    "r": 0.06
+   },
+   "comentario": "Nido de piedra en la base, hay que reparar"
+  },
+  {
+   "id": "a-f1-2",
+   "foto_id": "f1",
+   "numero": 2,
+   "tipo": "circulo",
+   "geometria": {
+    "cx": 0.52,
+    "cy": 0.3,
+    "r": 0.06
+   },
+   "comentario": "Desencofrado del coronamiento en curso"
+  },
+  {
+   "id": "a-f5-1",
+   "foto_id": "f5",
+   "numero": 1,
+   "tipo": "circulo",
+   "geometria": {
+    "cx": 0.4,
+    "cy": 0.42,
+    "r": 0.1
+   },
+   "comentario": "Superficie bien terminada en esta cara"
+  },
+  {
+   "id": "a-f5-2",
+   "foto_id": "f5",
+   "numero": 2,
+   "tipo": "flecha",
+   "geometria": {
+    "x1": 0.06,
+    "y1": 0.68,
+    "x2": 0.22,
+    "y2": 0.83
+   },
+   "comentario": "Restos de hormigón y madera al pie, limpiar"
+  }
+ ],
+ "clima": null,
+ "personal": []
+}
