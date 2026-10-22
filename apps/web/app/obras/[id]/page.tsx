@@ -10,6 +10,7 @@ import { CARGOS, fechaLarga, hora, hoy, sumarDias } from "@/lib/formato";
 import { Avatar, Encabezado, Numero, Vacio } from "@/components/ui";
 import { SubirFotos } from "@/components/subir-fotos";
 import { FotoAnotada, NumeroMarca } from "@/components/foto-anotada";
+import { VisorFotos } from "@/components/visor-fotos";
 
 type Agrupar = "item" | "persona" | "sector";
 
@@ -29,6 +30,7 @@ export default function DiaDeObra() {
   const urls = useUrls(dia.fotos.map((f) => f.archivo_path));
   const [agrupar, setAgrupar] = useState<Agrupar>("item");
   const [subiendo, setSubiendo] = useState(false);
+  const [visor, setVisor] = useState<number | null>(null);
 
   const campo = equipo.filter((m) => m.rol === "campo");
   const autores = new Set(dia.fotos.map((f) => f.autor_id));
@@ -50,6 +52,8 @@ export default function DiaDeObra() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dia.fotos, agrupar, sectores, items, equipo]);
 
+  // Las fotos en el mismo orden en que se ven, para pasar de una a otra en el visor.
+  const enOrden = grupos.flatMap((g) => g.fotos);
   const itemsDelDia = items.filter((i) => autoresDe(dia.fotos, i.id).length > 0);
   if (!obra) return null;
 
@@ -115,6 +119,7 @@ export default function DiaDeObra() {
                       anotaciones={dia.anotaciones.filter((a) => a.foto_id === f.id)}
                       item={agrupar !== "item" ? items.find((i) => i.id === f.item_id) : undefined}
                       sector={agrupar !== "sector" ? sectores.find((s) => s.id === f.sector_id)?.nombre : undefined}
+                      alAbrir={() => setVisor(enOrden.findIndex((x) => x.id === f.id))}
                     />
                   ))}
                 </div>
@@ -159,6 +164,23 @@ export default function DiaDeObra() {
           )}
         </aside>
       </div>
+      {visor !== null && (
+        <VisorFotos
+          inicial={visor}
+          cerrar={() => setVisor(null)}
+          fotos={enOrden.map((f) => {
+            const it = items.find((i) => i.id === f.item_id);
+            const sector = sectores.find((s) => s.id === f.sector_id)?.nombre;
+            return {
+              foto: f,
+              src: urls[f.archivo_path],
+              anotaciones: dia.anotaciones.filter((a) => a.foto_id === f.id),
+              autor: nombre(f.autor_id),
+              detalle: [it && nombreItem(it), sector].filter(Boolean).join(" · "),
+            };
+          })}
+        />
+      )}
       {editor && <SubirFotos obraId={id} fecha={fecha} abierto={subiendo} cerrar={() => setSubiendo(false)} alSubir={() => dia.mutate()} />}
     </div>
   );
@@ -234,6 +256,7 @@ function TarjetaFoto({
   anotaciones,
   item,
   sector,
+  alAbrir,
 }: {
   foto: Foto;
   src?: string;
@@ -241,11 +264,14 @@ function TarjetaFoto({
   anotaciones: Anotacion[];
   item?: Item;
   sector?: string;
+  alAbrir: () => void;
 }) {
   const [activa, setActiva] = useState<number>();
   return (
     <article className="tarjeta flex flex-wrap overflow-hidden">
-      <FotoAnotada foto={foto} src={src} anotaciones={anotaciones} activa={activa} alActivar={setActiva} className="min-h-[240px] flex-[1_1_300px]" />
+      <div className="grid flex-[1_1_300px] place-items-center bg-[#0b1220]">
+        <FotoAnotada foto={foto} src={src} anotaciones={anotaciones} activa={activa} alActivar={setActiva} alAbrir={alAbrir} maxAlto={440} />
+      </div>
       <div className="flex flex-[1_1_280px] flex-col gap-3 px-5 py-4">
         <div className="flex flex-wrap items-center gap-2.5">
           <Avatar nombre={autor} oscuro />

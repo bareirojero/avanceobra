@@ -12,7 +12,7 @@ const fecha = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const ObraParam = z.object({ obraId: uuid });
 const IdParam = z.object({ id: uuid });
 const rol = z.enum(['editor', 'campo', 'lector']);
-const cargo = z.enum(['capataz', 'residente', 'jefe_obra', 'fiscal', 'cliente', 'otro']);
+const cargo = z.enum(['capataz', 'residente', 'jefe_obra', 'oficina_tecnica', 'fiscal', 'cliente', 'otro']);
 
 const ObraCampos = z
   .object({

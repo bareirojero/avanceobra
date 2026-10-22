@@ -19,7 +19,7 @@ export const NOMBRE_APP = 'Avance de Obra';
 // -----------------------------------------------------------------------------
 
 export type RolObra = 'editor' | 'campo' | 'lector';
-export type CargoObra = 'capataz' | 'residente' | 'jefe_obra' | 'fiscal' | 'cliente' | 'otro';
+export type CargoObra = 'capataz' | 'residente' | 'jefe_obra' | 'oficina_tecnica' | 'fiscal' | 'cliente' | 'otro';
 export type EstadoObra = 'activa' | 'pausada' | 'terminada' | 'archivada';
 export type TipoAnotacion = 'punto' | 'circulo' | 'rectangulo' | 'flecha' | 'trazo';
 export type OrigenFoto = 'app' | 'web';

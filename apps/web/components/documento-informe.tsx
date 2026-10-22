@@ -61,12 +61,15 @@ export function DocumentoInforme({
   seleccion,
   seleccionar,
   cambiar,
+  alAbrirFoto,
 }: {
   datos: DatosDocumento;
   editable?: boolean;
   seleccion?: Seleccion;
   seleccionar?: (s: Seleccion) => void;
   cambiar?: (c: ContenidoInforme) => void;
+  /** Abre la foto en el visor a pantalla completa. */
+  alAbrirFoto?: (fotoId: string) => void;
 }) {
   const { obra, numero, fecha, contenido: c, fotos, anotaciones, items, sectores, nombre, urls } = datos;
   const item = (id: string) => items.find((i) => i.id === id);
@@ -162,7 +165,7 @@ export function DocumentoInforme({
                 const marcas = anotaciones.filter((x) => x.foto_id === foto.id && fi.anotaciones.includes(x.numero));
                 return (
                   <figure key={fi.foto_id} className="m-0 flex flex-col gap-1">
-                    <FotoAnotada foto={foto} src={urls[foto.archivo_path]} anotaciones={marcas} className="aspect-[4/3]" />
+                    <FotoAnotada foto={foto} src={urls[foto.archivo_path]} anotaciones={marcas} maxAlto={300} alAbrir={alAbrirFoto && (() => alAbrirFoto(foto.id))} />
                     {editable ? (
                       <textarea
                         rows={1}

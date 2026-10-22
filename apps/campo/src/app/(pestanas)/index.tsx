@@ -17,7 +17,7 @@ import { useDatos } from '@/state/datos';
 import { color, fuente, syncState } from '@/theme';
 
 const CARGOS: Record<string, string> = {
-  capataz: 'Capataz', residente: 'Residente', jefe_obra: 'Jefe de obra', fiscal: 'Fiscal', cliente: 'Cliente', otro: '',
+  capataz: 'Capataz', residente: 'Residente', jefe_obra: 'Jefe de obra', oficina_tecnica: 'Oficina Técnica', fiscal: 'Fiscal', cliente: 'Cliente', otro: '',
 };
 
 const iniciales = (nombre: string) =>
