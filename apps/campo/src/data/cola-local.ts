@@ -29,7 +29,9 @@ export async function encolarArchivo(tx: SQLiteDatabase, op: Extract<OperacionPe
 export type Recurso = Extract<OperacionPendiente, { tipo: 'upsert' }>['recurso'];
 
 /** Tabla local de cada recurso de la API. */
-export const TABLA_DE: Record<Recurso, string> = { partes: 'partes_diarios', fotos: 'fotos', anotaciones: 'anotaciones' };
+export const TABLA_DE: Record<Recurso, string> = {
+  partes: 'partes_diarios', fotos: 'fotos', anotaciones: 'anotaciones', pedidos: 'pedidos_materiales',
+};
 
 /**
  * Encola el upsert de una fila. Si ya hay uno esperando para la misma fila, le cambia

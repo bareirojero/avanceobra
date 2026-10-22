@@ -9,9 +9,9 @@ import { CARGOS, ROLES } from "@/lib/formato";
 import { Avatar, Encabezado, Modal } from "@/components/ui";
 
 const AYUDA_ROL: Record<RolObra, string> = {
-  campo: "Saca fotos y comenta desde la app del teléfono.",
+  campo: "Saca fotos, comenta y pide materiales desde la app del teléfono.",
   editor: "Carga el itemizado, crea usuarios, sube fotos y publica los informes.",
-  lector: "Mira el día de obra y los informes publicados. No edita nada.",
+  lector: "Mira el día de obra y los informes publicados y baja los pedidos de materiales. No edita nada.",
 };
 const ORDEN: RolObra[] = ["campo", "editor", "lector"];
 

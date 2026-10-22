@@ -51,6 +51,9 @@ docs/              Esta documentación
 | `registros_dia` | Clima y personal de cada día de obra, cargados a mano por el editor |
 | `informes` | Diario, semanal o mensual: `contenido_ia` (original), `contenido` (corregido), número correlativo (ODD-001-001), PDF |
 | `informe_fotos` | Qué fotos alimentaron cada informe, base para los resúmenes semanales y mensuales |
+| `materiales` | Catálogo de materiales de la organización (código, descripción, unidad), importado del Excel de SAP. Un código repetido por centro se carga una vez |
+| `importaciones_materiales` | Cada carga del Excel de materiales |
+| `pedidos_materiales` | Pedido de campo: material, cantidad, sector (un ítem del itemizado), fecha en que hace falta y `pedido_en` (hora del teléfono). Id generado en el teléfono |
 
 No hay porcentajes de avance: el avance se describe en palabras.
 
@@ -64,6 +67,9 @@ No hay porcentajes de avance: el avance se describe en palabras.
 | Ver la carga del día | sí | sí | — |
 | Generar, corregir y publicar informes | sí | — | — |
 | Ver y descargar informes publicados (PDF) | sí | sí | sí |
+| Importar el catálogo de materiales | sí | — | — |
+| Pedir materiales | sí | sí (app) | — |
+| Ver y bajar en Excel los pedidos de materiales (con el código) | sí | solo los propios, sin código | sí |
 
 Las reglas viven en la base (RLS). La API se conecta con el rol `avance_api`, que no es dueño de las tablas, y en cada transacción declara el usuario con `set_config('app.usuario_id', …, true)`. Las funciones `mi_rol_en`, `puedo_ver`, `puedo_cargar`, `soy_editor` y `puedo_corregir` concentran la lógica. `avance_api` no puede leer `clave_hash` ni la tabla de sesiones: login, sesiones y altas de usuarios pasan por funciones `security definer`.
 

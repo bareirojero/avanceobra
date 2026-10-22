@@ -207,3 +207,52 @@ test('informe del día: generar, publicar y PDF', async () => {
     assert.match(await (await abrir(pdf.r.headers.location as string)).texto(), /^%PDF/);
   }
 });
+
+test('materiales: catálogo, pedido desde campo y planilla', async () => {
+  const editor = await entrar('editor');
+  const campo = await entrar('capataz');
+  const lector = await entrar('fiscal');
+  const filas = [
+    { codigo: 'MAT-001', descripcion: 'Cemento CPII', unidad: 'BOLSA' },
+    { codigo: 'MAT-002', descripcion: 'Arena lavada', unidad: 'M3' },
+    { codigo: 'MAT-002', descripcion: 'Arena lavada (otro centro)', unidad: 'M3' }, // SAP repite por centro
+  ];
+  const archivo = { archivo_nombre: 'materiales.xlsx', filas };
+  assert.equal((await pedir('POST', '/materiales/importar', campo.acceso, archivo)).estado, 403);
+  const imp = await pedir('POST', '/materiales/importar', editor.acceso, archivo);
+  assert.equal(imp.estado, 200, JSON.stringify(imp.json));
+  assert.equal((await pedir('GET', '/materiales', editor.acceso)).json.length, 2);
+
+  // Campo baja el catálogo sin el código.
+  const sync = (await pedir('GET', `/obras/${OBRA}/sync`, campo.acceso)).json;
+  const cemento = sync.materiales.find((m: { descripcion: string }) => m.descripcion === 'Cemento CPII');
+  assert.ok(cemento);
+  assert.equal(cemento.codigo, undefined);
+  assert.equal(cemento.unidad, 'BOLSA');
+  const item = sync.items.find((i: { es_titulo: boolean }) => !i.es_titulo);
+  const titulo = sync.items.find((i: { es_titulo: boolean }) => i.es_titulo);
+
+  const id = randomUUID();
+  const p = { obra_id: OBRA, material_id: cemento.id, item_id: item.id, cantidad: 25, necesario_para: hoy(), pedido_en: new Date().toISOString() };
+  assert.equal((await pedir('PUT', `/pedidos/${randomUUID()}`, campo.acceso, { ...p, item_id: titulo.id })).estado, 403);
+  assert.equal((await pedir('PUT', `/pedidos/${randomUUID()}`, lector.acceso, p)).estado, 403);
+  const r1 = await pedir('PUT', `/pedidos/${id}`, campo.acceso, p);
+  assert.equal(r1.estado, 200, JSON.stringify(r1.json));
+  const r2 = await pedir('PUT', `/pedidos/${id}`, campo.acceso, p); // reintento de la cola
+  assert.equal(r2.estado, 200);
+
+  // Volver a importar conserva el material y sus pedidos.
+  await pedir('POST', '/materiales/importar', editor.acceso, { ...archivo, filas: [{ ...filas[0], descripcion: 'Cemento CP II' }] });
+
+  for (const quien of [editor, lector]) {
+    const lista = await pedir('GET', `/obras/${OBRA}/pedidos`, quien.acceso);
+    assert.equal(lista.estado, 200);
+    const fila = lista.json.find((x: { id: string }) => x.id === id);
+    assert.equal(fila.material_codigo, 'MAT-001');
+    assert.equal(fila.material_descripcion, 'Cemento CP II');
+    assert.equal(fila.cantidad, 25);
+    assert.equal(fila.autor_nombre, 'Capataz de prueba');
+  }
+  const catalogo = (await pedir('GET', '/materiales', editor.acceso)).json;
+  assert.deepEqual(catalogo.map((m: { codigo: string }) => m.codigo), ['MAT-001']);
+});

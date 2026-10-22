@@ -86,7 +86,7 @@ export async function rutasCampo(app: FastifyInstance) {
       const [obra] = await q(`select * from obras where id = $1`, [obraId]);
       if (!obra) throw noEncontrado('Obra');
       const desdeCarga = `hoy_py() - ${DIAS_HISTORIA_EN_TELEFONO}`;
-      const [miembros, sectores, items, partes, fotos, anotaciones, registros_dia] = await Promise.all([
+      const [miembros, sectores, items, partes, fotos, anotaciones, registros_dia, materiales] = await Promise.all([
         q(
           `select m.*, u.nombre, u.usuario from obra_miembros m join usuarios u on u.id = m.usuario_id
             where m.obra_id = $1 and (m.actualizado_en > $2 or u.actualizado_en > $2)`,
@@ -112,8 +112,14 @@ export async function rutasCampo(app: FastifyInstance) {
           obraId,
           d,
         ]),
+        // Catálogo de la organización, sin el código (campo no lo ve).
+        q(
+          `select id, descripcion, unidad, orden, creado_en, actualizado_en, eliminado_en from materiales
+            where organizacion_id = $1 and actualizado_en > $2 order by orden`,
+          [obra.organizacion_id, d],
+        ),
       ]);
-      return { hasta, obra, miembros, sectores, items, partes, fotos, anotaciones, registros_dia };
+      return { hasta, obra, miembros, sectores, items, partes, fotos, anotaciones, registros_dia, materiales };
     });
   });
 

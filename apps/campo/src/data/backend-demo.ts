@@ -1,4 +1,4 @@
-import type { Obra } from '@registro-obra/contrato';
+import type { MaterialCampo, Obra } from '@registro-obra/contrato';
 import NetInfo from '@react-native-community/netinfo';
 
 import { ErrorSinConexion } from '@/domain/cola';
@@ -27,6 +27,14 @@ const OBRA_DEMO: Obra = {
   cliente: null, direccion: 'Asunción', latitud: null, longitud: null, fecha_inicio: null, fecha_fin_prevista: null,
   estado: 'activa', notas_para_informe: null,
 };
+
+// Algunos materiales de la exportación de SAP, para probar el pedido sin servidor.
+const MATERIALES_DEMO: MaterialCampo[] = (
+  [
+    ['ALCOHOL', 'L'], ['GAS LICUADO DE PETROLEO', 'KG'], ['DIESEL PODIUM', 'L'], ['CEMENTO CPII 50 KG', 'BOLSA'],
+    ['ARENA LAVADA', 'M3'], ['PIEDRA TRITURADA 4ª', 'M3'], ['HIERRO CA-50 Ø 10 MM', 'BARRA'], ['ALAMBRE RECOCIDO Nº 18', 'KG'],
+  ] as const
+).map(([descripcion, unidad], i) => ({ ...base, id: `e0000000-0000-4000-8000-${String(i + 1).padStart(12, '0')}`, descripcion, unidad, orden: i + 1 }));
 
 const espera = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -77,12 +85,13 @@ export function crearBackendDemo(): Backend {
     },
 
     async novedades(_obraId, desde) {
-      const vacio = { hasta: ACTUALIZADO, obra: OBRA_DEMO, miembros: [], sectores: [], items: [], partes: [], fotos: [], anotaciones: [], registros_dia: [] };
+      const vacio = { hasta: ACTUALIZADO, obra: OBRA_DEMO, miembros: [], sectores: [], items: [], partes: [], fotos: [], anotaciones: [], registros_dia: [], materiales: [] };
       if (desde && desde >= ACTUALIZADO) return vacio;
       return {
         ...vacio,
         miembros: [{ ...base, obra_id: OBRA, usuario_id: YO, rol: 'campo', cargo: 'residente', nombre, usuario }],
         items: itemsDesdePep(ITEMIZADO_DEMO, OBRA, (i) => id(i + 1), ACTUALIZADO),
+        materiales: MATERIALES_DEMO,
       };
     },
   };

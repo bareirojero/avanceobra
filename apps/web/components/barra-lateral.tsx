@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Building2, CalendarDays, FileText, ListChecks, LogOut, Settings, Users } from "lucide-react";
+import { Building2, CalendarDays, FileText, ListChecks, LogOut, Package, Settings, Users } from "lucide-react";
 import { useSWRConfig } from "swr";
 import { api } from "@/lib/api";
 import { useObra, useYo } from "@/lib/datos";
@@ -20,6 +20,9 @@ export function BarraLateral() {
     : [
         { href: base, texto: "Día de obra", icono: CalendarDays, activo: ruta === base },
         { href: `${base}/informes`, texto: "Informes", icono: FileText, activo: ruta.startsWith(`${base}/informes`) },
+        ...(rol === "editor" || rol === "lector"
+          ? [{ href: `${base}/materiales`, texto: "Materiales", icono: Package, activo: ruta.startsWith(`${base}/materiales`) }]
+          : []),
         ...(rol === "editor"
           ? [
               { href: `${base}/items`, texto: "Itemizado", icono: ListChecks, activo: ruta.startsWith(`${base}/items`) },
