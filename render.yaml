@@ -39,9 +39,11 @@ services:
     runtime: node
     plan: free
     region: virginia
-    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm --filter @registro-obra/web build
-    startCommand: pnpm --filter @registro-obra/web start
+    buildCommand: npx --yes pnpm@9.12.3 install --frozen-lockfile && npx --yes pnpm@9.12.3 --filter @registro-obra/web build
+    startCommand: npm --prefix apps/web run start
     autoDeploy: true
     envVars:
+      - key: NODE_VERSION
+        value: "22"
       - key: API_URL_INTERNA
         sync: false
