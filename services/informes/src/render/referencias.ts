@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { fotoAnotada } from "../anotar.ts";
-import { fechaCorta, fechaLarga, rubro, type LeerFoto } from "../generar.ts";
+import { fechaCorta, fechaLarga, horaLocal, rubro, type LeerFoto } from "../generar.ts";
 import type { ContenidoInforme, DatosDelDia } from "../tipos.ts";
 
 /** Colores del sistema de diseño (packages/ui-tokens) y datos fijos del encabezado. */
@@ -28,7 +28,7 @@ export interface Referencias {
   item(id: string): { numero: string | null; codigo: string; descripcion: string; rubro: string } | undefined;
   anotacion(foto_id: string, numero: number): { comentario: string | null } | undefined;
   foto(id: string): { autor: string; hora: string; comentario: string | null } | undefined;
-  imagen(id: string): string; // data URI de la foto con sus marcas
+  imagen(id: string): string; // data URI de la foto con sus marcas; "" si no se pudo leer
 }
 
 const LOGO = new URL("../../activos/logo.png", import.meta.url);
@@ -60,7 +60,11 @@ export async function armarReferencias(
     const foto = datos.fotos.find((x) => x.id === f.foto_id);
     if (!foto) continue;
     const marcas = datos.anotaciones.filter((a) => a.foto_id === f.foto_id && f.anotaciones.includes(a.numero));
-    imagenes.set(f.foto_id, await fotoAnotada(await leerFoto(foto.archivo_path), marcas, 1400));
+    try {
+      imagenes.set(f.foto_id, await fotoAnotada(await leerFoto(foto.archivo_path), marcas, 1400));
+    } catch {
+      // Archivo corrupto o subida cortada: esa foto sale como "no disponible", el informe sigue.
+    }
   }
 
   const usuarios = new Map(datos.usuarios.map((u) => [u.id, u.nombre]));
@@ -83,8 +87,7 @@ export async function armarReferencias(
     foto: (id) => {
       const f = datos.fotos.find((x) => x.id === id);
       if (!f) return undefined;
-      const hora = new Date(f.tomada_en).toLocaleTimeString("es-PY", { hour: "2-digit", minute: "2-digit", timeZone: "America/Asuncion" });
-      return { autor: usuarios.get(f.autor_id) ?? "", hora, comentario: f.comentario };
+      return { autor: usuarios.get(f.autor_id) ?? "", hora: horaLocal(f.tomada_en), comentario: f.comentario };
     },
     imagen: (id) => {
       const b = imagenes.get(id);
