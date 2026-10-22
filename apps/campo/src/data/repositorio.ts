@@ -5,11 +5,14 @@ import {
   type Anotacion,
   type Foto,
   type Item,
+  type MaterialCampo,
   type Obra,
   type AnotacionPedido,
   type FotoPedido,
   type ParteDiario,
   type PartePedido,
+  type PedidoMaterial,
+  type PedidoMaterialPedido,
   type RolObra,
 } from '@registro-obra/contrato';
 import * as Crypto from 'expo-crypto';
@@ -309,6 +312,69 @@ export async function eliminarFoto(id: string): Promise<void> {
     const ahora = ahoraIso();
     await tx.runAsync('UPDATE fotos SET eliminado_en = ?, actualizado_en = ? WHERE id = ?', ahora, ahora, id);
     await encolarUpsert(tx, 'fotos', id, fotoParaSubir({ ...foto, eliminado_en: ahora }), [foto.parte_id, id]);
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Materiales
+// ---------------------------------------------------------------------------
+
+/** Catálogo de la organización, como lo bajó la sincronización (sin códigos). */
+export async function materiales(): Promise<MaterialCampo[]> {
+  return (await db()).getAllAsync<MaterialCampo>('SELECT * FROM materiales WHERE eliminado_en IS NULL ORDER BY orden');
+}
+
+export interface PedidoLocal extends PedidoMaterial {
+  material: string;
+  unidad: string | null;
+  estado: EstadoEnvio;
+  error: string | null;
+}
+
+/** Pedidos de esta persona en la obra (los hechos desde este teléfono), del más nuevo al más viejo. */
+export async function misPedidos(obraId: string, autorId: string): Promise<PedidoLocal[]> {
+  const filas = await (await db()).getAllAsync<Omit<PedidoLocal, 'estado'> & { en_cola: number }>(
+    `SELECT p.*, COALESCE(m.descripcion, 'Material') AS material, m.unidad,
+       (SELECT c.error FROM cola_salida c WHERE c.tabla = 'pedidos_materiales' AND c.fila_id = p.id AND c.error IS NOT NULL LIMIT 1) AS error,
+       EXISTS (SELECT 1 FROM cola_salida c WHERE c.tabla = 'pedidos_materiales' AND c.fila_id = p.id) AS en_cola
+     FROM pedidos_materiales p LEFT JOIN materiales m ON m.id = p.material_id
+     WHERE p.obra_id = ? AND p.autor_id = ? AND p.eliminado_en IS NULL
+     ORDER BY p.pedido_en DESC LIMIT 200`,
+    obraId, autorId,
+  );
+  return filas.map(({ en_cola, ...p }) => ({ ...p, estado: p.error ? 'error' : en_cola ? 'pendiente' : 'subida' }));
+}
+
+export interface PedidoAGuardar {
+  obraId: string;
+  autorId: string;
+  materialId: string;
+  itemId: string;
+  cantidad: number;
+  necesarioPara: string | null;
+}
+
+/** Guarda el pedido en el teléfono y encola su envío (PUT /api/pedidos/:id). */
+export async function guardarPedido(d: PedidoAGuardar): Promise<void> {
+  const ahora = ahoraIso();
+  const p: PedidoMaterial = {
+    id: nuevoId(), obra_id: d.obraId, autor_id: d.autorId, material_id: d.materialId, item_id: d.itemId,
+    cantidad: d.cantidad, necesario_para: d.necesarioPara, pedido_en: ahora,
+    creado_en: ahora, actualizado_en: ahora, eliminado_en: null,
+  };
+  const fila: PedidoMaterialPedido = {
+    obra_id: p.obra_id, material_id: p.material_id, item_id: p.item_id, cantidad: p.cantidad,
+    necesario_para: p.necesario_para, pedido_en: p.pedido_en,
+  };
+  await (await db()).withExclusiveTransactionAsync(async (tx) => {
+    await tx.runAsync(
+      `INSERT INTO pedidos_materiales (id, obra_id, autor_id, material_id, item_id, cantidad, necesario_para, pedido_en,
+         creado_en, actualizado_en, eliminado_en)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      p.id, p.obra_id, p.autor_id, p.material_id, p.item_id, p.cantidad, p.necesario_para, p.pedido_en,
+      p.creado_en, p.actualizado_en, p.eliminado_en,
+    );
+    await encolarUpsert(tx, 'pedidos', p.id, fila, [p.id]);
   });
 }
 

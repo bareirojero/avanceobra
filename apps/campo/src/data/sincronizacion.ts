@@ -128,6 +128,7 @@ const DESTINOS = {
   partes: { tabla: 'partes_diarios', clave: ID, referencia: false },
   fotos: { tabla: 'fotos', clave: ID, referencia: false },
   anotaciones: { tabla: 'anotaciones', clave: ID, referencia: false },
+  materiales: { tabla: 'materiales', clave: ID, referencia: true },
 } satisfies Record<string, Destino>;
 
 const CON_PENDIENTE = new Set(['partes_diarios', 'fotos', 'anotaciones']);
@@ -206,6 +207,8 @@ export async function bajarNovedades() {
       await guardarFilas(tx, DESTINOS.partes, r.partes);
       await guardarFilas(tx, DESTINOS.fotos, r.fotos);
       await guardarFilas(tx, DESTINOS.anotaciones, r.anotaciones);
+      // Una API anterior al módulo de materiales no los manda.
+      await guardarFilas(tx, DESTINOS.materiales, r.materiales ?? []);
     });
     await guardarAjuste(`cursor.${obra.id}`, r.hasta);
   }

@@ -1,23 +1,24 @@
 import { Tabs, type BottomTabBarProps } from 'expo-router/js-tabs';
-import { CalendarDays, Upload, type LucideIcon } from 'lucide-react-native';
+import { CalendarDays, Package, Upload, type LucideIcon } from 'lucide-react-native';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useSync } from '@/state/app';
 import { color, fuente } from '@/theme';
 
-const ICONOS: Record<string, LucideIcon> = { index: CalendarDays, envios: Upload };
+const ICONOS: Record<string, LucideIcon> = { index: CalendarDays, materiales: Package, envios: Upload };
 
 export default function Pestanas() {
   return (
     <Tabs screenOptions={{ headerShown: false }} tabBar={(p) => <Barra {...p} />}>
       <Tabs.Screen name="index" options={{ title: 'Hoy' }} />
+      <Tabs.Screen name="materiales" options={{ title: 'Materiales' }} />
       <Tabs.Screen name="envios" options={{ title: 'Envíos' }} />
     </Tabs>
   );
 }
 
-/** Barra inferior de 72 px: Hoy y Envíos (con contador si hay algo esperando). */
+/** Barra inferior de 72 px: Hoy, Materiales y Envíos (con contador si hay algo esperando). */
 function Barra({ state, descriptors, navigateToTab }: BottomTabBarProps) {
   const { bottom } = useSafeAreaInsets();
   const { resumen } = useSync();

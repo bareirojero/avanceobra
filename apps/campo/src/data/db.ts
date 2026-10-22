@@ -72,6 +72,20 @@ const MIGRACIONES: string[] = [
   CREATE INDEX cola_fila ON cola_salida (tabla, fila_id);
   CREATE TABLE ajustes (clave TEXT PRIMARY KEY, valor TEXT NOT NULL);
   `,
+  // Materiales: catálogo de la organización (sin código) y pedidos hechos desde el teléfono.
+  `
+  CREATE TABLE materiales (
+    id TEXT PRIMARY KEY, descripcion TEXT NOT NULL, unidad TEXT, orden INTEGER NOT NULL DEFAULT 0,
+    creado_en TEXT, actualizado_en TEXT, eliminado_en TEXT
+  );
+  CREATE TABLE pedidos_materiales (
+    id TEXT PRIMARY KEY, obra_id TEXT NOT NULL, autor_id TEXT NOT NULL, material_id TEXT NOT NULL,
+    item_id TEXT NOT NULL, cantidad REAL NOT NULL, necesario_para TEXT, pedido_en TEXT NOT NULL,
+    creado_en TEXT, actualizado_en TEXT, eliminado_en TEXT,
+    _pendiente INTEGER NOT NULL DEFAULT 0
+  );
+  CREATE INDEX pedidos_obra ON pedidos_materiales (obra_id, pedido_en);
+  `,
 ];
 
 let abierta: Promise<SQLite.SQLiteDatabase> | null = null;
@@ -103,6 +117,7 @@ export async function vaciarBase() {
   await base.execAsync(`
     DELETE FROM perfiles; DELETE FROM obras; DELETE FROM obra_miembros; DELETE FROM items;
     DELETE FROM partes_diarios; DELETE FROM fotos; DELETE FROM anotaciones;
+    DELETE FROM materiales; DELETE FROM pedidos_materiales;
     DELETE FROM cola_salida; DELETE FROM ajustes;
   `);
 }

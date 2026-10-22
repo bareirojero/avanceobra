@@ -2,7 +2,7 @@
 // Lecturas de la API para las pantallas, con caché y revalidación (SWR).
 import { useMemo } from "react";
 import useSWR from "swr";
-import type { CargoObra, DiaRespuesta, Informe, Item, RolObra, Sector, UsuarioConObras, Yo } from "@registro-obra/contrato";
+import type { CargoObra, DiaRespuesta, Informe, Item, Material, PedidoMaterialDetalle, RolObra, Sector, UsuarioConObras, Yo } from "@registro-obra/contrato";
 import { api, ErrorDeApi } from "./api";
 
 const opciones = { revalidateOnFocus: true, shouldRetryOnError: (e: unknown) => !(e instanceof ErrorDeApi && e.estado < 500) };
@@ -32,6 +32,18 @@ export function useSectores(obraId: string) {
   const { data, mutate } = useSWR<Sector[]>(`/obras/${obraId}/sectores`, api.get, opciones);
   const sectores = useMemo(() => (data ?? []).filter((s) => !s.eliminado_en).sort((a, b) => a.orden - b.orden), [data]);
   return { sectores, mutate };
+}
+
+/** Catálogo de materiales de la organización. */
+export function useMateriales() {
+  const { data, mutate, isLoading } = useSWR<Material[]>("/materiales", api.get, opciones);
+  return { materiales: data ?? [], cargando: isLoading, mutate };
+}
+
+/** Pedidos de materiales de la obra, del más nuevo al más viejo. Se refresca cada minuto. */
+export function usePedidos(obraId: string) {
+  const { data, mutate, isLoading } = useSWR<PedidoMaterialDetalle[]>(`/obras/${obraId}/pedidos`, api.get, { ...opciones, refreshInterval: 60000 });
+  return { pedidos: data ?? [], cargando: isLoading, mutate };
 }
 
 export function useUsuarios(activo = true) {

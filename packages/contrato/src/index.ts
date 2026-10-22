@@ -191,6 +191,40 @@ export interface Informe extends Sincronizable {
   publicado_en: Instante | null;
 }
 
+/** Material del catálogo de la organización (se importa desde Excel). */
+export interface Material extends Sincronizable {
+  id: Uuid;
+  organizacion_id: Uuid;
+  codigo: string; // no se muestra en la app de campo; sale en el Excel de pedidos
+  descripcion: string;
+  unidad: string | null;
+  orden: number;
+  importacion_id: Uuid | null;
+}
+
+/** Lo que baja la app de campo: el material sin su código. */
+export type MaterialCampo = Omit<Material, 'codigo' | 'organizacion_id' | 'importacion_id'>;
+
+export interface ImportacionMateriales extends ConFechas {
+  id: Uuid;
+  organizacion_id: Uuid;
+  archivo_nombre: string;
+  filas: number;
+  importado_por: Uuid;
+}
+
+/** Pedido de un material para la obra, hecho desde la app de campo. */
+export interface PedidoMaterial extends Sincronizable {
+  id: Uuid; // uuid v4 generado en el teléfono
+  obra_id: Uuid;
+  autor_id: Uuid;
+  material_id: Uuid;
+  item_id: Uuid; // sector: un ítem del itemizado (no título)
+  cantidad: number;
+  necesario_para: Fecha | null;
+  pedido_en: Instante;
+}
+
 // -----------------------------------------------------------------------------
 // Contenido del informe (jsonb). Dueño de la forma: services/informes
 // (esquema zod en src/tipos.ts). v3: un avance por ítem, sin porcentajes.
@@ -269,7 +303,7 @@ export const DIAS_HISTORIA_EN_TELEFONO = 14;
 
 export type OperacionPendiente =
   | { tipo: 'subir_archivo'; id: Uuid; ruta: string; uriLocal: string; contentType: 'image/jpeg' }
-  | { tipo: 'upsert'; id: Uuid; recurso: 'partes' | 'fotos' | 'anotaciones'; fila: Record<string, unknown> };
+  | { tipo: 'upsert'; id: Uuid; recurso: 'partes' | 'fotos' | 'anotaciones' | 'pedidos'; fila: Record<string, unknown> };
 
 // -----------------------------------------------------------------------------
 // API REST (detalle en docs/API.md). Base: /api. JSON en UTF-8.
@@ -335,6 +369,8 @@ export interface SyncRespuesta {
   fotos: Foto[];
   anotaciones: Anotacion[];
   registros_dia: RegistroDia[];
+  /** Catálogo de materiales de la organización, sin código. */
+  materiales: MaterialCampo[];
 }
 
 /** PUT /api/obras/:obraId/dia/:fecha/registro (solo editor) */
@@ -347,6 +383,8 @@ export type FotoPedido = Omit<Foto, 'id' | 'autor_id' | 'descripcion_ia' | 'crea
 /** PUT /api/anotaciones/:id */
 export type AnotacionPedido = Omit<Anotacion, 'id' | 'autor_id' | 'creado_en' | 'actualizado_en'>;
 // Borrar = PUT con eliminado_en. Campo solo corrige lo suyo del mismo día.
+/** PUT /api/pedidos/:id (idempotente: si ya existe, devuelve el guardado) */
+export type PedidoMaterialPedido = Pick<PedidoMaterial, 'obra_id' | 'material_id' | 'item_id' | 'cantidad' | 'necesario_para' | 'pedido_en'>;
 
 // --- Archivos ---
 
@@ -387,6 +425,29 @@ export interface FilaItemizado {
   inicio_previsto?: Fecha | null;
   fin_previsto?: Fecha | null;
 }
+/** GET  /api/materiales → Material[] (catálogo de la organización)
+ *  POST /api/materiales/importar → ImportacionMateriales (solo editor) */
+export interface ImportarMaterialesPedido {
+  archivo_nombre: string;
+  filas: FilaMaterial[];
+}
+export interface FilaMaterial {
+  codigo: string;
+  descripcion: string;
+  unidad?: string | null;
+}
+
+/** GET /api/obras/:obraId/pedidos → todos los pedidos de la obra, para el Excel (editor y solo lectura) */
+export interface PedidoMaterialDetalle extends PedidoMaterial {
+  autor_nombre: string;
+  material_codigo: string;
+  material_descripcion: string;
+  material_unidad: string | null;
+  item_codigo: string;
+  item_numero: string | null;
+  item_descripcion: string;
+}
+
 /** PATCH /api/items/:id */
 export type ItemCambio = Partial<Pick<Item, 'descripcion' | 'inicio_previsto' | 'fin_previsto'>>;
 
