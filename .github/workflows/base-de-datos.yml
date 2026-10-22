@@ -1,0 +1,53 @@
+# Aplica las migraciones a la base de producción cuando cambian en main.
+# Con "Run workflow" también puede hacer la carga inicial (una sola vez).
+# Secretos del repositorio (Settings > Secrets and variables > Actions):
+#   DATABASE_ADMIN_URL   conexión de Neon con el usuario dueño (con ?sslmode=require)
+#   AVANCE_API_CLAVE     contraseña para el rol avance_api que usa la API
+#   EDITOR_CLAVE         contraseña inicial del primer editor (solo para la carga inicial)
+name: Base de datos
+on:
+  push:
+    branches: [main]
+    paths: ["db/migrations/**"]
+  workflow_dispatch:
+    inputs:
+      inicial:
+        description: "Carga inicial (organización, primer editor y obra)"
+        type: boolean
+        default: false
+      editor_usuario:
+        description: "Usuario del primer editor"
+        default: "jbareiro"
+      editor_nombre:
+        description: "Nombre del primer editor"
+        default: "Jerónimo Bareiro"
+      organizacion:
+        description: "Nombre de la organización"
+        default: "Tecnoedil"
+concurrency: base-de-datos
+jobs:
+  migrar:
+    runs-on: ubuntu-latest
+    environment: produccion
+    env:
+      DATABASE_ADMIN_URL: ${{ secrets.DATABASE_ADMIN_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: pnpm install --frozen-lockfile --filter @registro-obra/db
+      - run: pnpm db:migrate
+      - name: Contraseña del rol de la API
+        run: psql "$DATABASE_ADMIN_URL" -v ON_ERROR_STOP=1 -c "alter role avance_api with password '$AVANCE_API_CLAVE'" > /dev/null
+        env:
+          AVANCE_API_CLAVE: ${{ secrets.AVANCE_API_CLAVE }}
+      - name: Carga inicial
+        if: ${{ inputs.inicial }}
+        run: node db/inicial.mjs
+        env:
+          ORG_NOMBRE: ${{ inputs.organizacion }}
+          EDITOR_USUARIO: ${{ inputs.editor_usuario }}
+          EDITOR_NOMBRE: ${{ inputs.editor_nombre }}
+          EDITOR_CLAVE: ${{ secrets.EDITOR_CLAVE }}
