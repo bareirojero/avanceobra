@@ -12,13 +12,13 @@
  │ importación del itemizado · usuarios · informes con IA · PDF (Chromium)│
  └───────────┬───────────────────────────┬───────────────────────┬──────┘
              ▼                           ▼
-   PostgreSQL 16 (Neon)        Cloudflare R2 (privado)
+   PostgreSQL 16 (Neon)        Google Drive (carpeta) 
    datos y permisos            fotos e informes PDF
 ```
 
-Producción (detalle y pasos en [DESPLIEGUE.md](DESPLIEGUE.md)): fotos y PDF en un bucket privado de Cloudflare R2 (compatible con S3), base en Neon y API en Render, en planes gratuitos. GitHub guarda solo código: ningún dato de obra, clave ni contraseña.
+Producción (detalle y pasos en [DESPLIEGUE.md](DESPLIEGUE.md)): fotos y PDF en una carpeta de Google Drive (permiso `drive.file`: la API solo ve lo que crea), base en Neon y API en Render, en planes gratuitos. GitHub guarda solo código: ningún dato de obra, clave ni contraseña.
 
-El almacenamiento es intercambiable (`ALMACEN=s3`, `sharepoint` o `azure`); en desarrollo local se usa Azurite. `docker compose up -d` levanta Postgres 16 y Azurite.
+El almacenamiento es intercambiable (`ALMACEN=drive`, `s3`, `sharepoint` o `azure`); en desarrollo local se usa Azurite. `docker compose up -d` levanta Postgres 16 y Azurite.
 
 ## Repositorio
 
@@ -76,8 +76,8 @@ Las reglas viven en la base (RLS). La API se conecta con el rol `avance_api`, qu
 
 ## Fotos y archivos
 
-- Bucket `avance-obra` en R2. Rutas: `fotos/{obra}/{autor}/{foto}.jpg`, `…_mini.jpg` y `informes/{obra}/{informe}.pdf`.
-- La API entrega URLs firmadas de corta duración: de escritura (15 min) solo para la carpeta propia y de lectura (1 h) solo si el usuario puede ver esa obra. Con R2 (y Azure) son URLs prefirmadas directo al almacenamiento; con SharePoint apuntan a `/api/archivos/datos/:token` (la API pasa los bytes a Graph). El cliente sube con `PUT` y los `encabezados` que devuelve `POST /api/archivos/subida`, y acepta cualquier 2xx.
+- Carpeta `Avance de Obra` de Google Drive, con subcarpetas según la ruta. Rutas: `fotos/{obra}/{autor}/{foto}.jpg`, `…_mini.jpg` y `informes/{obra}/{informe}.pdf`.
+- La API entrega URLs firmadas de corta duración: de escritura (15 min) solo para la carpeta propia y de lectura (1 h) solo si el usuario puede ver esa obra. Con Drive (y SharePoint) apuntan a `/api/archivos/datos/:token` y la API pasa los bytes; con S3 y Azure son URLs prefirmadas directo al almacenamiento. El cliente sube con `PUT` y los `encabezados` que devuelve `POST /api/archivos/subida`, y acepta cualquier 2xx.
 - El teléfono comprime antes de subir (lado mayor 2048 px, JPEG 0,8) y genera la miniatura de 400 px.
 
 ## Sincronización offline

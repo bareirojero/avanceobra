@@ -1,9 +1,9 @@
 // Subida y descarga de archivos a través de la API, con el token firmado de la
 // URL (sin sesión: la URL misma es la autorización, vence en minutos). Se usa
-// cuando el destino no da URLs firmadas propias (SharePoint).
+// cuando el destino no da URLs firmadas propias (Drive, SharePoint).
 
 import type { FastifyInstance } from 'fastify';
-import { guardar, leerTokenArchivo, urlDescarga } from '../archivos.ts';
+import { guardar, leer, leerTokenArchivo, urlDescarga } from '../archivos.ts';
 import { ErrorApi } from '../errores.ts';
 
 const TIPOS = ['image/jpeg', 'application/pdf'];
@@ -35,6 +35,11 @@ export async function rutasArchivos(app: FastifyInstance) {
 
   app.get<{ Params: { token: string } }>('/archivos/datos/:token', async (pedido, respuesta) => {
     const ruta = await verificar(pedido.params.token, 'r');
-    return respuesta.redirect(await urlDescarga(ruta));
+    const directa = await urlDescarga(ruta);
+    if (directa) return respuesta.redirect(directa);
+    return respuesta
+      .header('content-type', ruta.endsWith('.pdf') ? 'application/pdf' : 'image/jpeg')
+      .header('cache-control', 'private, max-age=300')
+      .send(await leer(ruta));
   });
 }

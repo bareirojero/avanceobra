@@ -7,7 +7,7 @@ function requerida(nombre: string): string {
   return valor;
 }
 
-const almacen = (process.env.ALMACEN ?? 'azure') as 'azure' | 'sharepoint' | 's3';
+const almacen = (process.env.ALMACEN ?? 'azure') as 'azure' | 'sharepoint' | 's3' | 'drive';
 
 export const config = {
   puerto: Number(process.env.PORT ?? process.env.PUERTO ?? 8080),
@@ -16,8 +16,8 @@ export const config = {
   /** URL pública de la API, para las URLs firmadas que pasan por ella. */
   urlPublica: (process.env.API_URL_PUBLICA ?? `http://localhost:${process.env.PORT ?? process.env.PUERTO ?? 8080}`).replace(/\/$/, ''),
   almacen,
-  /** Las URLs firmadas pasan por la API (siempre con SharePoint; con Azure, solo para probar). */
-  viaApi: almacen === 'sharepoint' || process.env.ALMACEN_VIA_API === '1',
+  /** Las URLs firmadas pasan por la API (siempre con SharePoint y Drive; con Azure o S3, solo para probar). */
+  viaApi: almacen === 'sharepoint' || almacen === 'drive' || process.env.ALMACEN_VIA_API === '1',
   storageConexion: almacen === 'azure' ? requerida('AZURE_STORAGE_CONNECTION_STRING') : undefined,
   storageContenedor: process.env.AZURE_STORAGE_CONTAINER ?? 'avance-obra',
   s3:
@@ -38,6 +38,18 @@ export const config = {
           clientSecret: requerida('MS_CLIENT_SECRET'),
           sitio: requerida('SHAREPOINT_SITIO'), // "empresa.sharepoint.com:/sites/Obras"
           carpeta: process.env.SHAREPOINT_CARPETA ?? 'Avance de Obra/datos',
+        }
+      : undefined,
+  drive:
+    almacen === 'drive'
+      ? {
+          clientId: requerida('GOOGLE_CLIENT_ID'),
+          clientSecret: requerida('GOOGLE_CLIENT_SECRET'),
+          refreshToken: requerida('GOOGLE_REFRESH_TOKEN'),
+          carpeta: process.env.DRIVE_CARPETA ?? 'Avance de Obra',
+          // Solo para pruebas contra un Drive simulado.
+          apiBase: process.env.DRIVE_API_BASE ?? 'https://www.googleapis.com',
+          tokenUrl: process.env.GOOGLE_TOKEN_URL ?? 'https://oauth2.googleapis.com/token',
         }
       : undefined,
   /** true detrás de HTTPS (producción): cookies Secure. */
