@@ -43,7 +43,10 @@ export function informeHtml(c: ContenidoInforme, ref: Referencias): string {
             .join("");
           const meta = ref.foto(f.foto_id);
           return `<figure>
-            <img src="${ref.imagen(f.foto_id)}" alt="">
+            ${(() => {
+              const src = ref.imagen(f.foto_id);
+              return src ? `<img src="${src}" alt="">` : `<div class="sin-foto">Foto no disponible</div>`;
+            })()}
             <figcaption>
               ${f.epigrafe.trim() ? `<div class="epi">${esc(f.epigrafe)}</div>` : ""}
               ${leyenda ? `<ol class="leyenda">${leyenda}</ol>` : ""}
@@ -117,6 +120,7 @@ export function informeHtml(c: ContenidoInforme, ref: Referencias): string {
   .fotos.resto { margin-top: 10px; }
   figure { margin: 0; break-inside: avoid; }
   figure img { max-width: 100%; max-height: 80mm; display:block; }
+  .sin-foto { height: 40mm; display:flex; align-items:center; justify-content:center; background: var(--fondo); border: 1px dashed var(--linea); color: var(--tenue); font-size: 8pt; }
   figcaption { padding-top: 4px; font-size: 7.5pt; }
   .epi { font-weight: 700; }
   .leyenda { list-style: none; padding: 0; margin: 2px 0 0; }

@@ -28,7 +28,7 @@ export interface Referencias {
   item(id: string): { numero: string | null; codigo: string; descripcion: string; rubro: string } | undefined;
   anotacion(foto_id: string, numero: number): { comentario: string | null } | undefined;
   foto(id: string): { autor: string; hora: string; comentario: string | null } | undefined;
-  imagen(id: string): string; // data URI de la foto con sus marcas
+  imagen(id: string): string; // data URI de la foto con sus marcas; "" si no se pudo leer
 }
 
 const LOGO = new URL("../../activos/logo.png", import.meta.url);
@@ -60,7 +60,11 @@ export async function armarReferencias(
     const foto = datos.fotos.find((x) => x.id === f.foto_id);
     if (!foto) continue;
     const marcas = datos.anotaciones.filter((a) => a.foto_id === f.foto_id && f.anotaciones.includes(a.numero));
-    imagenes.set(f.foto_id, await fotoAnotada(await leerFoto(foto.archivo_path), marcas, 1400));
+    try {
+      imagenes.set(f.foto_id, await fotoAnotada(await leerFoto(foto.archivo_path), marcas, 1400));
+    } catch {
+      // Archivo corrupto o subida cortada: esa foto sale como "no disponible", el informe sigue.
+    }
   }
 
   const usuarios = new Map(datos.usuarios.map((u) => [u.id, u.nombre]));
