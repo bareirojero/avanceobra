@@ -195,30 +195,51 @@ test('importación del itemizado SAP', async () => {
   assert.equal(nuevo.numero, '8');
   assert.equal(nuevo.descripcion, 'ITEM NUEVO');
   assert.equal(nuevo.nivel, 2);
-  assert.equal(items.length, 4);
+  // Incidente, dron y pluviómetro no vienen en la planilla y se conservan.
+  type Fila = { codigo: string; categoria: string; padre_id: string | null };
+  assert.equal(items.filter((i: Fila) => i.categoria === 'obra').length, 4);
+  assert.deepEqual(
+    items.filter((i: Fila) => i.categoria !== 'obra').map((i: Fila) => [i.categoria, i.codigo, i.padre_id]),
+    [['incidente', 'INCIDENTE', null], ['dron', 'DRON', null], ['pluviometro', 'PLUVIOMETRO', null]],
+  );
+  // Una fila del Excel con un código fijo no pisa la entrada fija.
+  const otra = await pedir('POST', `/obras/${OBRA}/items/importar`, editor.acceso, {
+    archivo_nombre: 'v3.xlsx', filas: [...filas, { codigo: 'DRON', descripcion: 'OTRA COSA', cantidad: 1 }],
+  });
+  assert.equal(otra.estado, 200, JSON.stringify(otra.json));
+  const despues = (await pedir('GET', `/obras/${OBRA}/items`, editor.acceso)).json;
+  assert.equal(despues.length, 7);
+  assert.equal(despues.find((i: Fila) => i.codigo === 'DRON').categoria, 'dron');
 });
 
 test('informe del día: generar, publicar y PDF', async () => {
   const editor = await entrar('editor');
   const yoEditor = editor.yo.usuario.id;
   const items = (await pedir('GET', `/obras/${OBRA}/items`, editor.acceso)).json;
-  const item = items.find((i: { es_titulo: boolean }) => !i.es_titulo);
+  const item = items.find((i: { es_titulo: boolean; categoria: string }) => !i.es_titulo && i.categoria === 'obra');
+  const incidente = items.find((i: { categoria: string }) => i.categoria === 'incidente');
 
   // El editor también puede subir fotos (desde la web).
   const parteId = idParte(OBRA, yoEditor, hoy());
   await pedir('PUT', `/partes/${parteId}`, editor.acceso, { obra_id: OBRA, fecha: hoy() });
-  const fotoId = randomUUID();
-  for (const ruta of [rutaFoto(OBRA, yoEditor, fotoId), rutaMiniatura(OBRA, yoEditor, fotoId)]) {
-    const s = await pedir('POST', '/archivos/subida', editor.acceso, { ruta, content_type: 'image/jpeg' });
-    const { status } = await abrir(s.json.url, { method: 'PUT', headers: s.json.encabezados, body: JPG });
-    assert.ok(status >= 200 && status < 300);
+  async function subirFoto(itemId: string, comentario: string, tomada_en: string) {
+    const fotoId = randomUUID();
+    for (const ruta of [rutaFoto(OBRA, yoEditor, fotoId), rutaMiniatura(OBRA, yoEditor, fotoId)]) {
+      const s = await pedir('POST', '/archivos/subida', editor.acceso, { ruta, content_type: 'image/jpeg' });
+      const { status } = await abrir(s.json.url, { method: 'PUT', headers: s.json.encabezados, body: JPG });
+      assert.ok(status >= 200 && status < 300);
+    }
+    const f = await pedir('PUT', `/fotos/${fotoId}`, editor.acceso, {
+      parte_id: parteId, obra_id: OBRA, item_id: itemId, origen: 'web', tomada_en,
+      archivo_path: rutaFoto(OBRA, yoEditor, fotoId), miniatura_path: rutaMiniatura(OBRA, yoEditor, fotoId),
+      comentario,
+    });
+    assert.equal(f.estado, 200, JSON.stringify(f.json));
+    return fotoId;
   }
-  const f = await pedir('PUT', `/fotos/${fotoId}`, editor.acceso, {
-    parte_id: parteId, obra_id: OBRA, item_id: item.id, origen: 'web', tomada_en: new Date().toISOString(),
-    archivo_path: rutaFoto(OBRA, yoEditor, fotoId), miniatura_path: rutaMiniatura(OBRA, yoEditor, fotoId),
-    comentario: 'Hormigonado de zapata en el eje 3',
-  });
-  assert.equal(f.estado, 200, JSON.stringify(f.json));
+  const fotoId = await subirFoto(item.id, 'Hormigonado de zapata en el eje 3', new Date(Date.now() - 60000).toISOString());
+  // Cargado después, el incidente igual sale primero en el informe.
+  await subirFoto(incidente.id, 'Se cortó la luz de obra media hora', new Date().toISOString());
 
   const gen = await pedir('POST', '/informes/generar', editor.acceso, { obra_id: OBRA, tipo: 'diario', fecha_desde: hoy(), forzar: true });
   assert.equal(gen.estado, 202, JSON.stringify(gen.json));
@@ -230,7 +251,7 @@ test('informe del día: generar, publicar y PDF', async () => {
     await new Promise((r) => setTimeout(r, 200));
   }
   assert.equal(inf.estado, 'borrador', inf.error);
-  assert.ok(inf.contenido.avances.length > 0);
+  assert.deepEqual(inf.contenido.avances.map((a: { item_id: string }) => a.item_id), [incidente.id, item.id]);
 
   const pub = await pedir('POST', `/informes/${id}/publicar`, editor.acceso);
   assert.equal(pub.estado, 200);

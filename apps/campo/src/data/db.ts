@@ -104,6 +104,8 @@ const MIGRACIONES: string[] = [
   ALTER TABLE pedidos_nueva RENAME TO pedidos_materiales;
   CREATE INDEX pedidos_obra ON pedidos_materiales (obra_id, pedido_en);
   `,
+  // Categoría del ítem: 'obra' (del Excel) o las entradas fijas incidente, dron y pluviometro.
+  `ALTER TABLE items ADD COLUMN categoria TEXT NOT NULL DEFAULT 'obra';`,
 ];
 
 /** Espera de hasta 20 s si otra conexión está escribiendo (la sincronización) en vez de fallar. */

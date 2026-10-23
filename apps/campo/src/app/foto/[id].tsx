@@ -262,7 +262,7 @@ export default function EditorFoto() {
           <BotonIcono icono={ArrowLeft} etiqueta="Volver a la foto" claro onPress={() => setPaso('marcas')} />
           <View style={{ flex: 1 }}>
             <Texto v="titulo">¿Qué ítem es?</Texto>
-            <Texto v="nota" style={{ fontSize: 14 }}>Cada foto va a un ítem del itemizado.</Texto>
+            <Texto v="nota" style={{ fontSize: 14 }}>Un ítem del itemizado, o incidente, dron o pluviómetro.</Texto>
           </View>
           <FotoConMarcas uri={imagen.miniatura} foto={imagen} marcas={marcas} compacta style={s.miniatura} />
         </View>

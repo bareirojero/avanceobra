@@ -155,11 +155,24 @@ export function SubirFotos({
           <span className="etiqueta">Ítem *</span>
           <select className="campo" required value={itemId} onChange={(e) => setItemId(e.target.value)}>
             <option value="">Elegí el ítem…</option>
-            {items.map((i) => (
-              <option key={i.id} value={i.id}>
-                {nombreItem(i)}
-              </option>
-            ))}
+            <optgroup label="Otros registros">
+              {items
+                .filter((i) => i.categoria !== "obra")
+                .map((i) => (
+                  <option key={i.id} value={i.id}>
+                    {i.descripcion}
+                  </option>
+                ))}
+            </optgroup>
+            <optgroup label="Ítems de obra">
+              {items
+                .filter((i) => i.categoria === "obra")
+                .map((i) => (
+                  <option key={i.id} value={i.id}>
+                    {nombreItem(i)}
+                  </option>
+                ))}
+            </optgroup>
           </select>
         </label>
         {sectores.length > 0 && (

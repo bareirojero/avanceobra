@@ -25,6 +25,8 @@ export type TipoAnotacion = 'punto' | 'circulo' | 'rectangulo' | 'flecha' | 'tra
 export type OrigenFoto = 'app' | 'web';
 export type TipoInforme = 'diario' | 'semanal' | 'mensual';
 export type EstadoInforme = 'generando' | 'borrador' | 'publicado' | 'error';
+/** 'obra': ítem del Excel de SAP. Las otras son entradas fijas que la base crea en cada obra. */
+export type CategoriaItem = 'obra' | 'incidente' | 'dron' | 'pluviometro';
 
 /** Estado de subida que la app muestra por foto (solo local). */
 export type EstadoSubida = 'pendiente' | 'subiendo' | 'subida' | 'error';
@@ -92,12 +94,23 @@ export interface Item extends Sincronizable {
   unidad: string | null;
   cantidad: number | null;
   es_titulo: boolean; // agrupador: no se le asignan fotos
+  categoria: CategoriaItem;
   nivel: number;
   orden: number;
   inicio_previsto: Fecha | null;
   fin_previsto: Fecha | null;
   importacion_id: Uuid | null;
 }
+
+/** Entradas fijas del itemizado, en el orden en que se ofrecen. */
+export const CATEGORIAS_ESPECIALES: { categoria: Exclude<CategoriaItem, 'obra'>; nombre: string }[] = [
+  { categoria: 'incidente', nombre: 'Incidente de obra' },
+  { categoria: 'dron', nombre: 'Vuelo de dron' },
+  { categoria: 'pluviometro', nombre: 'Pluviómetro' },
+];
+
+/** Orden en el informe: los incidentes siempre primero, después la obra, al final dron y pluviómetro. */
+export const ORDEN_CATEGORIA: Record<CategoriaItem, number> = { incidente: 0, obra: 1, dron: 2, pluviometro: 3 };
 
 export interface ImportacionItems extends ConFechas {
   id: Uuid;

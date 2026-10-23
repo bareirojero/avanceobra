@@ -1,13 +1,13 @@
-import { calcularItemsSinRegistro, fechaCorta } from "./generar.ts";
+import { calcularItemsSinRegistro, fechaCorta, ordenDeItems } from "./generar.ts";
 import { ContenidoInforme, type Alerta, type Avance, type DatosDelDia, type Foto } from "./tipos.ts";
 
 /**
  * Arma el informe sin IA (costo cero): un avance por ítem, en el orden del
- * itemizado, con sus fotos y el comentario de cada una al pie, tal como lo
+ * itemizado y con los incidentes de obra primero, con sus fotos y el comentario de cada una al pie, tal como lo
  * escribieron. El editor redacta el resumen y, si quiere, un texto por ítem.
  */
 export function armarInforme(datos: DatosDelDia): ContenidoInforme {
-  const orden = new Map(datos.items.map((i, n) => [i.id, n]));
+  const orden = ordenDeItems(datos.items);
   const usuario = (id: string) => datos.usuarios.find((u) => u.id === id)?.nombre ?? id;
   const marcasDe = (f: Foto) => datos.anotaciones.filter((a) => a.foto_id === f.id).sort((a, b) => a.numero - b.numero);
 
