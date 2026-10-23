@@ -1,6 +1,8 @@
 import { ITEMIZADO_DEMO } from '@/data/itemizado-demo';
 
-import { buscarItems, camino, cantidadDeHojas, hijos, itemsDesdePep, rubro, type FilaPep } from '../itemizado';
+import type { CategoriaItem, Item } from '@registro-obra/contrato';
+
+import { buscarItems, camino, cantidadDeHojas, especiales, esEspecial, hijos, itemsDesdePep, rubro, type FilaPep } from '../itemizado';
 
 const FILAS: FilaPep[] = [
   ['OC.1234', 'OBRA DE PRUEBA', null, null],
@@ -54,5 +56,34 @@ describe('itemizado desde SAP', () => {
     const odd = itemsDesdePep(ITEMIZADO_DEMO, 'obra', (i) => `x${i}`, '2026-10-21T00:00:00Z');
     expect(odd.length).toBe(ITEMIZADO_DEMO.length - 1);
     expect(odd.filter((i) => !i.es_titulo).every((i) => i.numero && i.padre_id)).toBe(true);
+  });
+});
+
+describe('entradas fijas: incidente, dron y pluviómetro', () => {
+  const fija = (categoria: CategoriaItem, descripcion: string, orden: number): Item => ({
+    ...items[0], id: categoria, padre_id: null, codigo: categoria.toUpperCase(), numero: null, descripcion,
+    unidad: null, cantidad: null, es_titulo: false, categoria, nivel: 0, orden,
+  });
+  const conFijas = [
+    fija('pluviometro', 'Pluviómetro', 1000001),
+    fija('dron', 'Vuelo de dron', 1000000),
+    ...items,
+    fija('incidente', 'Incidente de obra', -1),
+  ];
+
+  it('se ofrecen aparte, con el incidente primero, y no entran en el árbol de rubros', () => {
+    expect(especiales(conFijas).map((i) => i.id)).toEqual(['incidente', 'dron', 'pluviometro']);
+    expect(hijos(conFijas, null).some(esEspecial)).toBe(false);
+    expect(hijos(conFijas, null)).toHaveLength(3);
+    expect(rubro(conFijas, 'incidente')).toBe('');
+  });
+
+  it('se encuentran con el buscador', () => {
+    expect(buscarItems(conFijas, 'incidente').map((i) => i.id)).toEqual(['incidente']);
+    expect(buscarItems(conFijas, 'pluviometro').map((i) => i.id)).toEqual(['pluviometro']);
+  });
+
+  it('los ítems del Excel son de obra', () => {
+    expect(items.every((i) => i.categoria === 'obra')).toBe(true);
   });
 });

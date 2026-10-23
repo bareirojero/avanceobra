@@ -1,4 +1,4 @@
-import type { MaterialCampo, Obra } from '@registro-obra/contrato';
+import { CATEGORIAS_ESPECIALES, type Item, type MaterialCampo, type Obra } from '@registro-obra/contrato';
 import NetInfo from '@react-native-community/netinfo';
 
 import { ErrorSinConexion } from '@/domain/cola';
@@ -35,6 +35,13 @@ const MATERIALES_DEMO: MaterialCampo[] = (
     ['ARENA LAVADA', 'M3'], ['PIEDRA TRITURADA 4ª', 'M3'], ['HIERRO CA-50 Ø 10 MM', 'BARRA'], ['ALAMBRE RECOCIDO Nº 18', 'KG'],
   ] as const
 ).map(([descripcion, unidad], i) => ({ ...base, id: `e0000000-0000-4000-8000-${String(i + 1).padStart(12, '0')}`, descripcion, unidad, orden: i + 1 }));
+
+// Las entradas fijas que la base crea en cada obra (incidente, dron, pluviómetro).
+const ESPECIALES_DEMO: Item[] = CATEGORIAS_ESPECIALES.map(({ categoria, nombre }, n) => ({
+  ...base, id: id(900 + n), obra_id: OBRA, padre_id: null, codigo: categoria.toUpperCase(), numero: null,
+  descripcion: nombre, unidad: null, cantidad: null, es_titulo: false, categoria, nivel: 0,
+  orden: categoria === 'incidente' ? -1 : 1000000 + n, inicio_previsto: null, fin_previsto: null, importacion_id: null,
+}));
 
 const espera = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -90,7 +97,7 @@ export function crearBackendDemo(): Backend {
       return {
         ...vacio,
         miembros: [{ ...base, obra_id: OBRA, usuario_id: YO, rol: 'campo', cargo: 'residente', nombre, usuario }],
-        items: itemsDesdePep(ITEMIZADO_DEMO, OBRA, (i) => id(i + 1), ACTUALIZADO),
+        items: [...ESPECIALES_DEMO, ...itemsDesdePep(ITEMIZADO_DEMO, OBRA, (i) => id(i + 1), ACTUALIZADO)],
         materiales: MATERIALES_DEMO,
       };
     },

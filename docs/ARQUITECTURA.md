@@ -44,7 +44,7 @@ docs/              Esta documentación
 | `obra_miembros` | Rol de cada usuario en cada obra: `editor`, `campo`, `lector`, y su cargo |
 | `sectores` | Sectores físicos jerárquicos, opcionales |
 | `importaciones_items` | Cada carga del Excel del itemizado: archivo, versión SAP, filas, quién |
-| `items` | Itemizado jerárquico por código PEP. Sin cantidad = título (no recibe fotos). `numero` = el "15" de "15-CERRAMIENTO…" |
+| `items` | Itemizado jerárquico por código PEP. Sin cantidad = título (no recibe fotos). `numero` = el "15" de "15-CERRAMIENTO…". `categoria`: `obra` (del Excel) o las tres entradas fijas que la base crea en cada obra (`incidente`, `dron`, `pluviometro`), sin padre ni código PEP, que la importación no toca. En el informe los incidentes van primero |
 | `partes_diarios` | Agrupa lo que cargó una persona en una obra en un día. Id determinístico `id_parte(obra, autor, fecha)` |
 | `fotos` | Foto con ítem obligatorio, sector opcional, comentario libre, GPS y origen (app o web) |
 | `anotaciones` | Marcas numeradas opcionales sobre la foto, cada una con su comentario |

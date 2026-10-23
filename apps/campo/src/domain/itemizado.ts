@@ -1,4 +1,4 @@
-import type { Item } from '@registro-obra/contrato';
+import { CATEGORIAS_ESPECIALES, type Item } from '@registro-obra/contrato';
 
 /**
  * Itemizado de la obra: árbol de títulos (rubros) e ítems. Los ítems hoja son los que se
@@ -30,7 +30,7 @@ export function itemsDesdePep(filas: FilaPep[], obraId: string, idDe: (indice: n
     items.push({
       id, obra_id: obraId, padre_id: padre?.id ?? null,
       codigo: pep, numero: numero ? numero[1] : null, descripcion: (numero ? numero[2] : texto).trim(),
-      unidad, cantidad, es_titulo: cantidad == null, nivel, orden: i,
+      unidad, cantidad, es_titulo: cantidad == null, categoria: 'obra', nivel, orden: i,
       inicio_previsto: null, fin_previsto: null, importacion_id: null,
       creado_en: fecha, actualizado_en: fecha, eliminado_en: null,
     });
@@ -43,11 +43,19 @@ const normal = (t: string) => t.toLowerCase().normalize('NFD').replace(/\p{Diacr
 /** "15 · CERRAMIENTO PERIMETRAL": el número de ítem, no el código PEP, que no dice nada en obra. */
 export const tituloItem = (i: Pick<Item, 'numero' | 'descripcion'>) => (i.numero ? `${i.numero} · ${i.descripcion}` : i.descripcion);
 
-/** Hijos directos, en el orden del itemizado. Con padre null, el primer nivel. */
+/** Incidente de obra, vuelo de dron o pluviómetro: entradas fijas de cada obra que no vienen del Excel. */
+export const esEspecial = (i: Pick<Item, 'categoria'>) => (i.categoria ?? 'obra') !== 'obra';
+
+/** Las entradas fijas de la obra, en el orden en que se ofrecen (incidente primero). */
+export function especiales(items: Item[]): Item[] {
+  return CATEGORIAS_ESPECIALES.flatMap(({ categoria }) => items.filter((i) => i.categoria === categoria));
+}
+
+/** Hijos directos, en el orden del itemizado. Con padre null, el primer nivel. Sin las entradas fijas. */
 export function hijos(items: Item[], padreId: string | null): Item[] {
   const existe = new Set(items.map((i) => i.id));
   return items
-    .filter((i) => (i.padre_id && existe.has(i.padre_id) ? i.padre_id : null) === padreId)
+    .filter((i) => !esEspecial(i) && (i.padre_id && existe.has(i.padre_id) ? i.padre_id : null) === padreId)
     .sort((a, b) => a.orden - b.orden);
 }
 

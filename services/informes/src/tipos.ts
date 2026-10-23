@@ -36,6 +36,12 @@ export interface Foto {
   comentario: string | null; // texto general debajo de la foto
 }
 
+/**
+ * "obra": ítem del itemizado SAP. Las otras son entradas fijas de cada obra
+ * (Incidente de obra, Vuelo de dron, Pluviómetro), sin código PEP.
+ */
+export type CategoriaItem = "obra" | "incidente" | "dron" | "pluviometro";
+
 /** Ítem del itemizado SAP. Las filas sin cantidad son títulos (rubros). */
 export interface Item {
   id: string;
@@ -45,6 +51,7 @@ export interface Item {
   descripcion: string;
   unidad: string | null;
   es_titulo: boolean;
+  categoria?: CategoriaItem; // sin dato = "obra"
   previsto_en_fecha?: boolean; // según cronograma, si existe
 }
 

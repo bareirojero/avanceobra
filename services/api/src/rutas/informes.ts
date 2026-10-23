@@ -37,7 +37,7 @@ export function almacenPara(usuarioId: string) {
         );
         const sectores = await c(`select id, nombre from sectores where obra_id = $1 and eliminado_en is null order by orden`, [obra_id]);
         const items = await c(
-          `select id, padre_id, codigo, numero, descripcion, unidad, es_titulo,
+          `select id, padre_id, codigo, numero, descripcion, unidad, es_titulo, categoria,
                   case when inicio_previsto is null then null else $2::date between inicio_previsto and coalesce(fin_previsto, $2::date) end
                     as previsto_en_fecha
              from items where obra_id = $1 and eliminado_en is null order by orden`,

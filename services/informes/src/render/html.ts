@@ -30,7 +30,9 @@ export function informeHtml(c: ContenidoInforme, ref: Referencias): string {
     ["Informaron", autores.join(" · ") || "Sin registros"],
   ].filter(Boolean) as [string, string][];
 
-  const avances = c.avances
+  // Los incidentes de obra van siempre primero, aunque el contenido guardado tenga otro orden.
+  const avances = [...c.avances]
+    .sort((a, b) => (ref.item(a.item_id)?.orden ?? 1e9) - (ref.item(b.item_id)?.orden ?? 1e9))
     .map((a) => {
       const item = ref.item(a.item_id);
       const sectores = a.sector_ids.map((s) => ref.sector(s)).filter(Boolean) as string[];
@@ -61,7 +63,7 @@ export function informeHtml(c: ContenidoInforme, ref: Referencias): string {
       return `<section class="bloque">
         <div class="cabeza">
           <h2>${item?.numero ? `<span class="codigo">${esc(item.numero)}</span>` : ""}${esc(a.titulo)}</h2>
-          <div class="sub">${esc(sub)}${item ? `<span class="pep">${esc(item.codigo)}</span>` : ""}</div>
+          <div class="sub">${esc(sub)}${item && !item.especial ? `<span class="pep">${esc(item.codigo)}</span>` : ""}</div>
           ${a.texto.trim() ? `<div class="texto">${parrafos(a.texto)}</div>` : ""}
           ${primera ? `<div class="fotos">${primera}</div>` : ""}
         </div>
@@ -151,8 +153,8 @@ export function informeHtml(c: ContenidoInforme, ref: Referencias): string {
 
   ${c.resumen.trim() ? `<div class="resumen"><b>Resumen del día.</b> ${esc(c.resumen)}</div>` : ""}
 
-  ${avances}
   ${incidentes}
+  ${avances}
   ${pendientes}
   ${sinRegistro}
   ${c.observaciones ? `<section class="lista"><h3>Observaciones</h3>${parrafos(c.observaciones)}</section>` : ""}

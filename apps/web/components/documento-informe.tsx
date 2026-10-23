@@ -1,7 +1,7 @@
 "use client";
 // El informe tal como sale en el PDF (formato del Word modelo). En modo edición,
 // el resumen, los textos, los epígrafes y las listas se corrigen en el lugar.
-import type { Anotacion, ContenidoInforme, Foto, Item, Obra, Sector } from "@registro-obra/contrato";
+import { ORDEN_CATEGORIA, type Anotacion, type ContenidoInforme, type Foto, type Item, type Obra, type Sector } from "@registro-obra/contrato";
 import { fechaNumerica, hora } from "@/lib/formato";
 import { FotoAnotada } from "./foto-anotada";
 
@@ -74,6 +74,12 @@ export function DocumentoInforme({
   const { obra, numero, fecha, contenido: c, fotos, anotaciones, items, sectores, nombre, urls } = datos;
   const item = (id: string) => items.find((i) => i.id === id);
   const rubro = (i?: Item) => (i?.padre_id ? item(i.padre_id)?.descripcion : undefined);
+  // Los incidentes de obra van siempre primero, después el itemizado; dron y pluviómetro al final.
+  const posicion = (id: string) => {
+    const i = item(id);
+    return i ? ORDEN_CATEGORIA[i.categoria ?? "obra"] * 1e7 + i.orden : 1e9;
+  };
+  const avances = [...c.avances].sort((a, b) => posicion(a.item_id) - posicion(b.item_id));
   const editarAvance = (id: string, cambio: Partial<ContenidoInforme["avances"][number]>) =>
     cambiar?.({ ...c, avances: c.avances.map((a) => (a.id === id ? { ...a, ...cambio } : a)) });
 
@@ -136,7 +142,20 @@ export function DocumentoInforme({
         )
       )}
 
-      {c.avances.map((a) => {
+      {c.incidentes.length > 0 && (
+        <section className="mt-2">
+          <h3 className="mb-1.5 border-b border-borde pb-1 text-[16px] font-bold">Incidentes y novedades</h3>
+          <ul className="m-0 list-none p-0">
+            {c.incidentes.map((i, n) => (
+              <li key={n}>
+                • <b>{TIPO_INCIDENTE[i.tipo]}:</b> {i.texto}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {avances.map((a) => {
         const it = item(a.item_id);
         const activo = seleccion?.tipo === "avance" && seleccion.id === a.id;
         const sub = [rubro(it), ...a.sector_ids.map((s) => sectores.find((x) => x.id === s)?.nombre)].filter(Boolean).join(" · ");
@@ -148,7 +167,7 @@ export function DocumentoInforme({
             </h2>
             <div className="flex justify-between gap-3 text-[11px] text-tenue">
               <span>{sub}</span>
-              {it && <span className="shrink-0 tabular-nums">{it.codigo}</span>}
+              {it && (it.categoria ?? "obra") === "obra" && <span className="shrink-0 tabular-nums">{it.codigo}</span>}
             </div>
             <Texto
               valor={a.texto}
@@ -201,19 +220,6 @@ export function DocumentoInforme({
           </section>
         );
       })}
-
-      {c.incidentes.length > 0 && (
-        <section className="mt-2">
-          <h3 className="mb-1.5 border-b border-borde pb-1 text-[16px] font-bold">Incidentes y novedades</h3>
-          <ul className="m-0 list-none p-0">
-            {c.incidentes.map((i, n) => (
-              <li key={n}>
-                • <b>{TIPO_INCIDENTE[i.tipo]}:</b> {i.texto}
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
 
       {(c.pendientes.length > 0 || editable) && (
         <section className="mt-2">

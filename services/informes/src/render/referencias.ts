@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { fotoAnotada } from "../anotar.ts";
-import { fechaCorta, fechaLarga, horaLocal, rubro, type LeerFoto } from "../generar.ts";
+import { fechaCorta, fechaLarga, horaLocal, ordenDeItems, rubro, type LeerFoto } from "../generar.ts";
 import type { ContenidoInforme, DatosDelDia } from "../tipos.ts";
 
 /** Colores del sistema de diseño (packages/ui-tokens) y datos fijos del encabezado. */
@@ -25,7 +25,8 @@ export interface Referencias {
   pie: string;
   usuario(id: string): string | undefined;
   sector(id: string): string | undefined;
-  item(id: string): { numero: string | null; codigo: string; descripcion: string; rubro: string } | undefined;
+  /** orden: posición en el informe (incidentes primero). especial: Incidente, Dron o Pluviómetro, sin código PEP. */
+  item(id: string): { numero: string | null; codigo: string; descripcion: string; rubro: string; orden: number; especial: boolean } | undefined;
   anotacion(foto_id: string, numero: number): { comentario: string | null } | undefined;
   foto(id: string): { autor: string; hora: string; comentario: string | null } | undefined;
   imagen(id: string): string; // data URI de la foto con sus marcas; "" si no se pudo leer
@@ -68,6 +69,7 @@ export async function armarReferencias(
   }
 
   const usuarios = new Map(datos.usuarios.map((u) => [u.id, u.nombre]));
+  const orden = ordenDeItems(datos.items);
   return {
     obra: datos.obra,
     marca: opciones.marca ?? (await marcaPorDefecto()),
@@ -81,7 +83,16 @@ export async function armarReferencias(
     sector: (id) => datos.sectores.find((s) => s.id === id)?.nombre,
     item: (id) => {
       const i = datos.items.find((x) => x.id === id);
-      return i && { numero: i.numero, codigo: i.codigo, descripcion: i.descripcion, rubro: rubro(datos.items, i) };
+      return (
+        i && {
+          numero: i.numero,
+          codigo: i.codigo,
+          descripcion: i.descripcion,
+          rubro: rubro(datos.items, i),
+          orden: orden.get(i.id) ?? 1e9,
+          especial: !!i.categoria && i.categoria !== "obra",
+        }
+      );
     },
     anotacion: (foto_id, numero) => datos.anotaciones.find((x) => x.foto_id === foto_id && x.numero === numero),
     foto: (id) => {

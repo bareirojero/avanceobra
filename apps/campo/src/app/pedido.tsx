@@ -12,7 +12,7 @@ import { ElegirItem, tituloItem } from '@/components/selectores';
 import { borrarSilencioso, procesarFoto } from '@/data/fotos-disco';
 import { guardarPedido, itemsDeObra, itemsRecientes, materiales as leerMateriales, nuevoId } from '@/data/repositorio';
 import { refrescarResumen, sincronizarPronto } from '@/data/sincronizacion';
-import { rubro } from '@/domain/itemizado';
+import { esEspecial, rubro } from '@/domain/itemizado';
 import { buscarMateriales, leerCantidad, proximosDias } from '@/domain/materiales';
 import { useApp } from '@/state/app';
 import { mostrarAviso } from '@/state/memoria';
@@ -46,7 +46,8 @@ export default function Pedido() {
     if (!obraId || !usuarioId) return;
     void (async () => {
       setCatalogo(await leerMateriales());
-      setItems(await itemsDeObra(obraId));
+      // Un pedido es para un sector de la obra: incidente, dron y pluviómetro no van.
+      setItems((await itemsDeObra(obraId)).filter((i) => !esEspecial(i)));
       setRecientes(await itemsRecientes(obraId, usuarioId));
     })();
   }, [obraId, usuarioId]);

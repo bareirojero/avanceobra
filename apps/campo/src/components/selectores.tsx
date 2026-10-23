@@ -1,9 +1,9 @@
 import type { Item } from '@registro-obra/contrato';
-import { Check, ChevronLeft, ChevronRight, Search, X } from 'lucide-react-native';
+import { Check, ChevronLeft, ChevronRight, CloudRain, Drone, Search, TriangleAlert, X, type LucideIcon } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { buscarItems, cantidadDeHojas, hijos, rubro, tituloItem } from '@/domain/itemizado';
+import { buscarItems, cantidadDeHojas, especiales, hijos, rubro, tituloItem } from '@/domain/itemizado';
 import { color, fuente, toque } from '@/theme';
 
 import { Texto } from './base';
@@ -15,10 +15,13 @@ type Fila =
   | { tipo: 'rubro'; clave: string; item: Item; cantidad: number }
   | { tipo: 'item'; clave: string; item: Item; rubro?: string };
 
+const ICONO: Record<string, LucideIcon> = { incidente: TriangleAlert, dron: Drone, pluviometro: CloudRain };
+
 /**
- * Elegir el ítem de la foto: arriba el buscador; sin buscar, los usados hace poco y el
- * itemizado por rubros (se entra a un rubro y se vuelve con la flecha). Los títulos no se
- * eligen, solo agrupan.
+ * Elegir el ítem de la foto: arriba el buscador; sin buscar, las entradas fijas (incidente
+ * de obra, vuelo de dron, pluviómetro), los usados hace poco y el itemizado por rubros (se
+ * entra a un rubro y se vuelve con la flecha). Los títulos no se eligen, solo agrupan.
+ * Las entradas fijas aparecen solo si vienen en `items`.
  */
 export function ElegirItem({
   items,
@@ -57,6 +60,7 @@ export function ElegirItem({
   }, [items, recientes, texto, abierto]);
 
   const rubroAbierto = abierto ? items.find((i) => i.id === abierto) : undefined;
+  const fijas = useMemo(() => especiales(items), [items]);
   const subir = () => setAbierto(rubroAbierto?.padre_id ?? null);
 
   return (
@@ -85,6 +89,32 @@ export function ElegirItem({
               </Pressable>
             ) : null}
           </View>
+          {!texto.trim() && !rubroAbierto && fijas.length > 0 && (
+            <View style={s.fijas}>
+              {fijas.map((i) => {
+                const Icono = ICONO[i.categoria] ?? Check;
+                const esElegido = elegido === i.id;
+                const incidente = i.categoria === 'incidente';
+                const tinta = esElegido ? '#fff' : incidente ? color.dangerText : color.ink;
+                return (
+                  <Pressable
+                    key={i.id}
+                    accessibilityRole="radio"
+                    accessibilityState={{ checked: esElegido }}
+                    onPress={() => alElegir(i.id)}
+                    style={({ pressed }) => [
+                      s.fija,
+                      incidente && s.fijaIncidente,
+                      esElegido && (incidente ? s.fijaIncidenteElegida : s.fijaElegida),
+                      pressed && s.apretada,
+                    ]}>
+                    <Icono size={26} color={tinta} strokeWidth={2.25} />
+                    <Text style={[s.textoFija, { color: tinta }]} numberOfLines={2}>{i.descripcion}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          )}
           {!texto.trim() && rubroAbierto && (
             <Pressable onPress={subir} accessibilityRole="button" accessibilityLabel="Volver al rubro anterior" style={s.volver}>
               <ChevronLeft size={26} color={color.ink} strokeWidth={2.5} />
@@ -147,6 +177,15 @@ const s = StyleSheet.create({
   campoBuscar: { flex: 1, fontFamily: fuente.body, fontSize: 17, color: color.ink, minHeight: toque.control },
   volver: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: toque.control, paddingVertical: 4 },
   textoVolver: { fontFamily: fuente.displayBold, fontSize: 18, color: color.ink },
+  fijas: { flexDirection: 'row', gap: 8 },
+  fija: {
+    flex: 1, minHeight: 84, paddingHorizontal: 6, paddingVertical: 10, borderRadius: 14, borderWidth: 2,
+    borderColor: color.line, backgroundColor: color.surface, alignItems: 'center', justifyContent: 'center', gap: 6,
+  },
+  fijaIncidente: { borderColor: color.danger, backgroundColor: color.dangerSoft },
+  fijaElegida: { borderColor: color.ink, backgroundColor: color.ink },
+  fijaIncidenteElegida: { borderColor: color.danger, backgroundColor: color.danger },
+  textoFija: { fontFamily: fuente.bodySemi, fontSize: 15, textAlign: 'center' },
   seccion: { fontFamily: fuente.displayBold, fontSize: 15, color: color.inkSoft, textTransform: 'uppercase', marginTop: 8 },
   fila: {
     minHeight: 60, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 14, borderWidth: 2,

@@ -1,7 +1,8 @@
 "use client";
 import { useParams } from "next/navigation";
 import { useMemo, useRef, useState } from "react";
-import { FileSpreadsheet, ListChecks, MapPinned, Plus, Upload } from "lucide-react";
+import { CloudRain, Drone, FileSpreadsheet, ListChecks, MapPinned, Plus, TriangleAlert, Upload } from "lucide-react";
+import type { CategoriaItem } from "@registro-obra/contrato";
 import readXlsxFile from "read-excel-file";
 import { api } from "@/lib/api";
 import { nombreItem, useItems, useObra, useSectores } from "@/lib/datos";
@@ -11,7 +12,10 @@ import { Encabezado, Modal, Vacio } from "@/components/ui";
 export default function Itemizado() {
   const { id } = useParams<{ id: string }>();
   const { obra } = useObra(id);
-  const { items, cargando, mutate } = useItems(id);
+  const { items: todos, cargando, mutate } = useItems(id);
+  // Incidente, dron y pluviómetro no vienen del Excel: van aparte del árbol.
+  const items = useMemo(() => todos.filter((i) => i.categoria === "obra"), [todos]);
+  const especiales = useMemo(() => todos.filter((i) => i.categoria !== "obra"), [todos]);
   const [importando, setImportando] = useState(false);
   const [filtro, setFiltro] = useState("");
 
@@ -48,6 +52,25 @@ export default function Itemizado() {
 
       <div className="flex flex-wrap items-start gap-6">
         <section className="flex min-w-0 flex-[999_1_520px] flex-col gap-4">
+          {especiales.length > 0 && (
+            <div className="tarjeta flex flex-col gap-3 px-5 py-4">
+              <div className="flex flex-wrap gap-2">
+                {especiales.map((i) => {
+                  const Icono = ICONO_CATEGORIA[i.categoria];
+                  return (
+                    <span key={i.id} className={`chip h-9 cursor-default gap-1.5 ${i.categoria === "incidente" ? "text-peligro-texto" : ""}`}>
+                      {Icono && <Icono size={16} />} {i.descripcion}
+                    </span>
+                  );
+                })}
+              </div>
+              <p className="text-sm text-tenue">
+                Además de los ítems de obra, cada foto se puede catalogar como incidente, vuelo de dron o pluviómetro. Están en todas las obras y la planilla de SAP no
+                las cambia. En el informe, los incidentes van siempre primero.
+              </p>
+            </div>
+          )}
+
           {reales.length > 0 && (
             <div className="tarjeta flex flex-wrap items-center gap-x-8 gap-y-3 px-5 py-4">
               <span className="flex-1 text-sm text-tenue">
@@ -155,6 +178,8 @@ function Sectores({ obraId }: { obraId: string }) {
     </aside>
   );
 }
+
+const ICONO_CATEGORIA: Partial<Record<CategoriaItem, typeof Drone>> = { incidente: TriangleAlert, dron: Drone, pluviometro: CloudRain };
 
 const CAMPOS: { campo: Campo; texto: string; obligatorio?: boolean }[] = [
   { campo: "codigo", texto: "Elemento PEP", obligatorio: true },

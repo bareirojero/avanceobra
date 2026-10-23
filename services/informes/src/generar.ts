@@ -8,6 +8,7 @@ import {
   ContenidoInforme,
   Sintesis,
   type Avance,
+  type CategoriaItem,
   type DatosDelDia,
   type Foto,
   type Item,
@@ -31,13 +32,14 @@ let cliente: Anthropic | undefined;
  *    marcas dibujadas y redacta un avance por ítem + alertas. Los grupos van en paralelo.
  * 2) Una pasada de solo texto cruza todo: resumen, alertas generales,
  *    incidentes y pendientes.
- * El orden sigue el itemizado; autores e ítems sin registro se calculan sin IA.
+ * El orden sigue el itemizado, con los incidentes primero; autores e ítems sin
+ * registro se calculan sin IA.
  */
 export async function generarInforme(datos: DatosDelDia, leerFoto: LeerFoto): Promise<ContenidoInforme> {
   const grupos = agruparPorItem(datos, FOTOS_POR_GRUPO);
   const borradores = await Promise.all(grupos.map((g) => redactarGrupo(datos, g, leerFoto)));
 
-  const orden = new Map(datos.items.map((i, n) => [i.id, n]));
+  const orden = ordenDeItems(datos.items);
   const avances = unirPorItem(borradores.flatMap((b) => b.avances)).sort((a, b) => (orden.get(a.item_id) ?? 1e9) - (orden.get(b.item_id) ?? 1e9));
   const itemsSinRegistro = calcularItemsSinRegistro(datos);
   const sintesis = await sintetizar(datos, avances, itemsSinRegistro);
@@ -159,6 +161,7 @@ async function pedir<S extends z.ZodType>(
 export function rotuloItem(items: Item[], id: string): string {
   const item = items.find((i) => i.id === id);
   if (!item) return id;
+  if (item.categoria && item.categoria !== "obra") return `${item.descripcion} (no es un ítem del itemizado)`;
   return `${item.numero ? `${item.numero} ` : ""}${item.descripcion} (${item.codigo})${rubro(items, item) ? ` · ${rubro(items, item)}` : ""}`;
 }
 
@@ -212,9 +215,18 @@ export const fechaLarga = (fecha: string) =>
 
 export const fechaCorta = (fecha: string) => fecha.split("-").reverse().join("/");
 
+const ORDEN_CATEGORIA: Record<CategoriaItem, number> = { incidente: 0, obra: 1, dron: 2, pluviometro: 3 };
+
+/** Posición de cada ítem en el informe: los incidentes siempre primero, después el itemizado, al final dron y pluviómetro. */
+export function ordenDeItems(items: Item[]): Map<string, number> {
+  const rango = (i: Item) => ORDEN_CATEGORIA[i.categoria ?? "obra"];
+  const ordenados = items.map((i, n) => ({ i, n })).sort((a, b) => rango(a.i) - rango(b.i) || a.n - b.n);
+  return new Map(ordenados.map(({ i }, n) => [i.id, n]));
+}
+
 /** Fotos ordenadas por itemizado y hora, en grupos de ítems enteros de hasta `max` fotos. */
 export function agruparPorItem(datos: DatosDelDia, max: number): Foto[][] {
-  const orden = new Map(datos.items.map((i, n) => [i.id, n]));
+  const orden = ordenDeItems(datos.items);
   const porItem = new Map<string, Foto[]>();
   const ordenadas = [...datos.fotos].sort(
     (a, b) => (orden.get(a.item_id) ?? 1e9) - (orden.get(b.item_id) ?? 1e9) || a.tomada_en.localeCompare(b.tomada_en),
