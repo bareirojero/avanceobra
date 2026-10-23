@@ -59,6 +59,18 @@ export default function DiaDeObra() {
 
   return (
     <div className="mx-auto flex max-w-[1240px] flex-col gap-6 px-4 py-8 md:px-10">
+      {/* Cabecera de presentación: video en loop sin sonido (2,6 MB), con la primera imagen mientras carga. */}
+      <video
+        className="aspect-[1168/350] w-full rounded-xl bg-white object-cover print:hidden"
+        src="/cabecera/dia-de-obra.mp4"
+        poster="/cabecera/dia-de-obra.jpg"
+        autoPlay
+        muted
+        loop
+        playsInline
+        preload="metadata"
+        aria-hidden="true"
+      />
       <Encabezado miga={obra.nombre} titulo={fechaLarga(fecha)}>
         <button className="boton-secundario w-11 px-0" aria-label="Día anterior" onClick={() => irA(sumarDias(fecha, -1))}>
           <ChevronLeft size={18} />
