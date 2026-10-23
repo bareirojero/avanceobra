@@ -8,6 +8,7 @@ import { urlLectura, urlSubida } from '../archivos.ts';
 import { autenticar } from '../auth.ts';
 import { conUsuario, type Consulta } from '../db.ts';
 import { noEncontrado, sinPermiso } from '../errores.ts';
+import { RUTA_FOTO_PEDIDO } from './materiales.ts';
 
 const uuid = z.string().uuid();
 const instante = z.string().datetime({ offset: true });
@@ -190,7 +191,7 @@ export async function rutasCampo(app: FastifyInstance) {
   // URL firmada para subir una foto o su miniatura a la carpeta propia.
   app.post('/archivos/subida', async (pedido) => {
     const { ruta } = z.object({ ruta: z.string(), content_type: z.literal('image/jpeg') }).parse(pedido.body);
-    const m = RUTA_FOTO.exec(ruta);
+    const m = RUTA_FOTO.exec(ruta) ?? RUTA_FOTO_PEDIDO.exec(ruta);
     if (!m || m[2] !== pedido.sesion.usuarioId) throw sinPermiso('Solo podés subir a tu carpeta');
     const [{ ok }] = await conUsuario(pedido.sesion.usuarioId, (q) =>
       q(`select puedo_cargar($1) as ok`, [m[1]]),
@@ -209,15 +210,19 @@ export async function rutasCampo(app: FastifyInstance) {
   app.post('/archivos/ver', async (pedido) => {
     const { rutas } = z.object({ rutas: z.array(z.string()).max(500) }).parse(pedido.body);
     const permitidas = await conUsuario(pedido.sesion.usuarioId, async (q) => {
-      const [fotos, informes] = await Promise.all([
+      const [fotos, informes, pedidos] = await Promise.all([
         q<{ ruta: string }>(
           `select r as ruta from unnest($1::text[]) r
             where exists (select 1 from fotos f where f.archivo_path = r or f.miniatura_path = r)`,
           [rutas],
         ),
         q<{ ruta: string }>(`select pdf_path as ruta from informes where pdf_path = any($1)`, [rutas]),
+        q<{ ruta: string }>(
+          `select distinct r as ruta from pedidos_materiales p, unnest(p.fotos) r where p.fotos && $1::text[] and r = any($1)`,
+          [rutas],
+        ),
       ]);
-      return new Set([...fotos, ...informes].map((r) => r.ruta));
+      return new Set([...fotos, ...informes, ...pedidos].map((r) => r.ruta));
     });
     const urls: Record<string, string> = {};
     for (const r of rutas) if (permitidas.has(r)) urls[r] = (await urlLectura(r)).url;

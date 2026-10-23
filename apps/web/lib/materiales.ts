@@ -95,6 +95,7 @@ export async function descargarPedidos(pedidos: PedidoMaterialDetalle[], obra: s
       ancho: 16,
       celda: (p) => (p.necesario_para ? { value: fechaCalendario(p.necesario_para), type: Date, format: "dd/mm/yyyy" } : { value: "", type: String }),
     },
+    { titulo: "Fotos de referencia", ancho: 12, celda: (p) => ({ value: (p.fotos ?? []).length, type: Number }) },
   ];
   const datos: SheetData = [columnas.map((c) => negrita(c.titulo)), ...pedidos.map((p) => columnas.map((c) => c.celda(p)))];
   const hoy = new Date().toLocaleDateString("en-CA", { timeZone: "America/Asuncion" });

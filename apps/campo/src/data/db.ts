@@ -86,14 +86,35 @@ const MIGRACIONES: string[] = [
   );
   CREATE INDEX pedidos_obra ON pedidos_materiales (obra_id, pedido_en);
   `,
+  // Pedidos con material escrito a mano (sin material_id) y fotos de referencia (JSON).
+  `
+  CREATE TABLE pedidos_nueva (
+    id TEXT PRIMARY KEY, obra_id TEXT NOT NULL, autor_id TEXT NOT NULL, material_id TEXT,
+    material_texto TEXT, unidad_texto TEXT,
+    item_id TEXT NOT NULL, cantidad REAL NOT NULL, necesario_para TEXT, pedido_en TEXT NOT NULL,
+    fotos TEXT NOT NULL DEFAULT '[]',
+    creado_en TEXT, actualizado_en TEXT, eliminado_en TEXT,
+    _pendiente INTEGER NOT NULL DEFAULT 0
+  );
+  INSERT INTO pedidos_nueva (id, obra_id, autor_id, material_id, item_id, cantidad, necesario_para, pedido_en,
+    creado_en, actualizado_en, eliminado_en, _pendiente)
+  SELECT id, obra_id, autor_id, material_id, item_id, cantidad, necesario_para, pedido_en,
+    creado_en, actualizado_en, eliminado_en, _pendiente FROM pedidos_materiales;
+  DROP TABLE pedidos_materiales;
+  ALTER TABLE pedidos_nueva RENAME TO pedidos_materiales;
+  CREATE INDEX pedidos_obra ON pedidos_materiales (obra_id, pedido_en);
+  `,
 ];
+
+/** Espera de hasta 20 s si otra conexión está escribiendo (la sincronización) en vez de fallar. */
+const ESPERA_BLOQUEO = 'PRAGMA busy_timeout = 20000';
 
 let abierta: Promise<SQLite.SQLiteDatabase> | null = null;
 
 export function db(): Promise<SQLite.SQLiteDatabase> {
   abierta ??= (async () => {
     const base = await SQLite.openDatabaseAsync('avance-obra.db');
-    await base.execAsync('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = OFF;');
+    await base.execAsync(`PRAGMA journal_mode = WAL; PRAGMA foreign_keys = OFF; ${ESPERA_BLOQUEO};`);
     await migrar(base);
     return base;
   })();
@@ -108,6 +129,27 @@ async function migrar(base: SQLite.SQLiteDatabase) {
       await tx.execAsync(MIGRACIONES[v]);
       await tx.execAsync(`PRAGMA user_version = ${v + 1}`);
     });
+  }
+}
+
+/**
+ * Transacción exclusiva (una conexión aparte). La conexión nueva no trae la espera por
+ * bloqueo: sin ella, guardar mientras la sincronización escribe falla con "database is
+ * locked". Si igual choca (lectura que pasa a escritura), reintenta.
+ */
+export async function enTransaccion(tarea: (tx: SQLite.SQLiteDatabase) => Promise<void>): Promise<void> {
+  const base = await db();
+  for (let intento = 1; ; intento++) {
+    try {
+      await base.withExclusiveTransactionAsync(async (tx) => {
+        await tx.execAsync(ESPERA_BLOQUEO);
+        await tarea(tx);
+      });
+      return;
+    } catch (e) {
+      if (intento >= 4 || !/locked|busy/i.test(String(e))) throw e;
+      await new Promise((r) => setTimeout(r, 500 * intento));
+    }
   }
 }
 

@@ -79,6 +79,7 @@ function FilaPedido({ pedido: p, sector }: { pedido: PedidoLocal; sector: string
   const meta = [
     `Pedido ${fechaCorta(fechaParte(new Date(p.pedido_en)))} ${horaCorta(p.pedido_en)}`,
     p.necesario_para ? `para el ${fechaCorta(p.necesario_para)}` : null,
+    p.fotos ? (p.fotos === 1 ? '1 foto' : `${p.fotos} fotos`) : null,
   ].filter(Boolean).join(' · ');
 
   async function tocar() {

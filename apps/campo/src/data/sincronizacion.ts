@@ -1,4 +1,4 @@
-import { SOLAPE_CURSOR_MS } from '@registro-obra/contrato';
+import { SOLAPE_CURSOR_MS, type SyncRespuesta } from '@registro-obra/contrato';
 import NetInfo, { type NetInfoState } from '@react-native-community/netinfo';
 import * as BackgroundTask from 'expo-background-task';
 import * as TaskManager from 'expo-task-manager';
@@ -10,7 +10,7 @@ import { procesarCola } from '@/domain/cola';
 import { alVencerSesion } from './backend-api';
 import { backend, type Fila } from './backend';
 import { almacenCola } from './cola-local';
-import { db, guardarAjuste, leerAjuste } from './db';
+import { enTransaccion, guardarAjuste, leerAjuste } from './db';
 import { resumenEnvios, type ResumenEnvios } from './repositorio';
 
 /**
@@ -128,7 +128,6 @@ const DESTINOS = {
   partes: { tabla: 'partes_diarios', clave: ID, referencia: false },
   fotos: { tabla: 'fotos', clave: ID, referencia: false },
   anotaciones: { tabla: 'anotaciones', clave: ID, referencia: false },
-  materiales: { tabla: 'materiales', clave: ID, referencia: true },
 } satisfies Record<string, Destino>;
 
 const CON_PENDIENTE = new Set(['partes_diarios', 'fotos', 'anotaciones']);
@@ -176,13 +175,33 @@ async function guardarFilas(tx: SQLiteDatabase, { tabla, clave, referencia }: De
   }
 }
 
+/**
+ * El catálogo de materiales puede tener miles de filas: se guarda de a 100 por sentencia
+ * para no tener la base bloqueada mucho tiempo (mientras tanto no se puede guardar nada).
+ */
+async function guardarMateriales(tx: SQLiteDatabase, filas: SyncRespuesta['materiales']) {
+  const borrados = filas.filter((m) => m.eliminado_en).map((m) => m.id);
+  const vigentes = filas.filter((m) => !m.eliminado_en);
+  for (let i = 0; i < borrados.length; i += 500) {
+    const parte = borrados.slice(i, i + 500);
+    await tx.runAsync(`DELETE FROM materiales WHERE id IN (${parte.map(() => '?').join(', ')})`, ...parte);
+  }
+  for (let i = 0; i < vigentes.length; i += 100) {
+    const parte = vigentes.slice(i, i + 100);
+    await tx.runAsync(
+      `INSERT OR REPLACE INTO materiales (id, descripcion, unidad, orden, creado_en, actualizado_en, eliminado_en)
+       VALUES ${parte.map(() => '(?, ?, ?, ?, ?, ?, NULL)').join(', ')}`,
+      ...parte.flatMap((m) => [m.id, m.descripcion, m.unidad, m.orden, m.creado_en, m.actualizado_en]),
+    );
+  }
+}
+
 export async function bajarNovedades() {
-  const base = await db();
   const yo = await backend().yo();
   const ids = yo.obras.map((o) => o.obra.id);
 
   // Obras y rol del usuario. Si lo sacaron de una obra, la obra desaparece del teléfono.
-  await base.withExclusiveTransactionAsync(async (tx) => {
+  await enTransaccion(async (tx) => {
     await guardarFilas(tx, DESTINOS.perfiles, [{ id: yo.usuario.id, nombre: yo.usuario.nombre, usuario: yo.usuario.usuario }]);
     await guardarFilas(tx, DESTINOS.obras, yo.obras.map((o) => o.obra));
     await guardarFilas(tx, DESTINOS.miembros, yo.obras.map((o) => ({
@@ -199,7 +218,7 @@ export async function bajarNovedades() {
     const cursor = await leerAjuste(`cursor.${obra.id}`);
     const desde = cursor ? new Date(new Date(cursor).getTime() - SOLAPE_CURSOR_MS).toISOString() : null;
     const r = await backend().novedades(obra.id, desde);
-    await base.withExclusiveTransactionAsync(async (tx) => {
+    await enTransaccion(async (tx) => {
       await guardarFilas(tx, DESTINOS.obras, [r.obra]);
       await guardarFilas(tx, DESTINOS.perfiles, r.miembros.map((m) => ({ id: m.usuario_id, nombre: m.nombre, usuario: m.usuario })));
       await guardarFilas(tx, DESTINOS.miembros, r.miembros);
@@ -208,7 +227,7 @@ export async function bajarNovedades() {
       await guardarFilas(tx, DESTINOS.fotos, r.fotos);
       await guardarFilas(tx, DESTINOS.anotaciones, r.anotaciones);
       // Una API anterior al módulo de materiales no los manda.
-      await guardarFilas(tx, DESTINOS.materiales, r.materiales ?? []);
+      await guardarMateriales(tx, r.materiales ?? []);
     });
     await guardarAjuste(`cursor.${obra.id}`, r.hasta);
   }

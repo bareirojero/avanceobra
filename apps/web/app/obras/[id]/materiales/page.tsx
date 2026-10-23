@@ -4,7 +4,7 @@ import { useMemo, useRef, useState } from "react";
 import { FileDown, FileSpreadsheet, Package, Upload } from "lucide-react";
 import readXlsxFile from "read-excel-file";
 import { api } from "@/lib/api";
-import { useMateriales, useObra, usePedidos } from "@/lib/datos";
+import { useMateriales, useObra, usePedidos, useUrls } from "@/lib/datos";
 import { fechaNumerica, hora } from "@/lib/formato";
 import type { Celda } from "@/lib/importar-items";
 import { type CampoMaterial, type MapeoMaterial, descargarPedidos, detectarColumnas, filasDeMateriales } from "@/lib/materiales";
@@ -16,6 +16,7 @@ export default function Materiales() {
   const editor = rol === "editor";
   const { pedidos, cargando } = usePedidos(id);
   const { materiales, mutate } = useMateriales();
+  const urls = useUrls(pedidos.flatMap((p) => p.fotos ?? []));
   const [importando, setImportando] = useState(false);
   const [bajando, setBajando] = useState(false);
   const [error, setError] = useState<string>();
@@ -95,6 +96,20 @@ export default function Materiales() {
                   <td className="px-3 py-3">
                     <div>{p.material_descripcion}</div>
                     <div className="text-sm tabular-nums text-tenue">{p.material_codigo}</div>
+                    {(p.fotos ?? []).length > 0 && (
+                      <div className="mt-1.5 flex gap-1.5">
+                        {p.fotos.map((r) =>
+                          urls[r] ? (
+                            <a key={r} href={urls[r]} target="_blank" rel="noopener" title="Foto de referencia">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src={urls[r]} alt="Foto de referencia del material" className="size-12 rounded-md object-cover" />
+                            </a>
+                          ) : (
+                            <span key={r} className="size-12 rounded-md bg-pista" />
+                          ),
+                        )}
+                      </div>
+                    )}
                   </td>
                   <td className="whitespace-nowrap px-3 py-3 text-right tabular-nums">
                     {Number(p.cantidad).toLocaleString("es-PY")} {p.material_unidad ?? ""}
