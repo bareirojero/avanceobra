@@ -53,10 +53,11 @@ export function useUsuarios(activo = true) {
 
 export type Miembro = UsuarioConObras & { rol: RolObra; cargo: CargoObra | null };
 
-/** Personas de la obra con su rol. Solo el editor ve la lista; el resto ve "Campo" como autor. */
+/** Personas de la obra con su rol. */
 export function useEquipo(obraId: string) {
   const { rol } = useObra(obraId);
-  const { usuarios, mutate } = useUsuarios(rol === "editor");
+  // Todos los de la obra ven los nombres (para "Informaron" y los autores de las fotos).
+  const { usuarios, mutate } = useUsuarios(rol !== null);
   const equipo = useMemo(
     () =>
       usuarios.flatMap((u) => {

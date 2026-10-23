@@ -200,9 +200,13 @@ test('informe del día: generar, publicar y PDF', async () => {
   assert.equal(pub.estado, 200);
   const lector = await entrar('fiscal');
   assert.equal((await pedir('GET', `/informes/${id}`, lector.acceso)).estado, 200);
+  // Publicado, el lector ve la foto del informe (y no la carga cruda de otros días).
+  const vistas = (await pedir('POST', '/archivos/ver', lector.acceso, { rutas: [rutaFoto(OBRA, yoEditor, fotoId)] })).json.urls;
+  assert.ok(vistas[rutaFoto(OBRA, yoEditor, fotoId)]);
 
   if (process.env.CHROMIUM_PATH) {
-    const pdf = await pedir('GET', `/informes/${id}/pdf`, editor.acceso);
+    // El lector también descarga el PDF aunque el editor no lo haya generado antes.
+    const pdf = await pedir('GET', `/informes/${id}/pdf`, lector.acceso);
     assert.equal(pdf.estado, 302);
     assert.match(await (await abrir(pdf.r.headers.location as string)).texto(), /^%PDF/);
   }

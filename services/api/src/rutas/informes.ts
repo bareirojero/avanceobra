@@ -227,13 +227,20 @@ export async function rutasInformes(app: FastifyInstance) {
     const { id } = IdParam.parse(pedido.params);
     const usuarioId = pedido.sesion.usuarioId;
     const [inf] = await conUsuario(usuarioId, (q) =>
-      q(`select id, pdf_path, contenido is not null as tiene, soy_editor(obra_id) as editor from informes where id = $1`, [id]),
+      q(
+        `select id, pdf_path, contenido is not null as tiene, soy_editor(obra_id) as editor, estado, publicado_por
+           from informes where id = $1`,
+        [id],
+      ),
     );
     if (!inf) throw noEncontrado('Informe');
     let ruta: string | null = inf.pdf_path;
     if (!ruta) {
-      if (!inf.tiene || !inf.editor) throw new ErrorApi(409, 'conflicto', 'El PDF todavía no está listo');
-      ruta = await (await informes()).exportar(almacenPara(usuarioId), id);
+      // Un lector solo ve informes publicados: su PDF se arma como quien lo publicó,
+      // que puede guardarlo, así queda hecho para los demás.
+      const actor = inf.editor ? usuarioId : inf.estado === 'publicado' ? inf.publicado_por : null;
+      if (!inf.tiene || !actor) throw new ErrorApi(409, 'conflicto', 'El PDF todavía no está listo');
+      ruta = await (await informes()).exportar(almacenPara(actor), id);
     }
     return respuesta.redirect((await urlLectura(ruta!)).url);
   });

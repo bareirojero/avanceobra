@@ -14,7 +14,7 @@ export default function LayoutObra({ children }: { children: React.ReactNode }) 
   const permitido =
     rol === "editor" ||
     (!!rol && (ruta === `/obras/${id}` || ruta.startsWith(`/obras/${id}/informes`))) ||
-    (rol === "lector" && ruta.startsWith(`/obras/${id}/materiales`));
+    (rol === "lector" && (ruta.startsWith(`/obras/${id}/materiales`) || ruta.startsWith(`/obras/${id}/dashboard`)));
 
   useEffect(() => {
     if (obra && rol && !permitido) router.replace(`/obras/${id}/informes`);

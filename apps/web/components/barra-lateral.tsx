@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Building2, CalendarDays, FileText, ListChecks, LogOut, Package, Settings, Users } from "lucide-react";
+import { Building2, CalendarDays, ChartColumn, FileText, Info, ListChecks, LogOut, Package, Settings, Users } from "lucide-react";
 import { useSWRConfig } from "swr";
 import { api } from "@/lib/api";
 import { useObra, useYo } from "@/lib/datos";
@@ -21,7 +21,10 @@ export function BarraLateral() {
         { href: base, texto: "Día de obra", icono: CalendarDays, activo: ruta === base },
         { href: `${base}/informes`, texto: "Informes", icono: FileText, activo: ruta.startsWith(`${base}/informes`) },
         ...(rol === "editor" || rol === "lector"
-          ? [{ href: `${base}/materiales`, texto: "Materiales", icono: Package, activo: ruta.startsWith(`${base}/materiales`) }]
+          ? [
+              { href: `${base}/materiales`, texto: "Materiales", icono: Package, activo: ruta.startsWith(`${base}/materiales`) },
+              { href: `${base}/dashboard`, texto: "Dashboard", icono: ChartColumn, activo: ruta.startsWith(`${base}/dashboard`) },
+            ]
           : []),
         ...(rol === "editor"
           ? [
@@ -56,6 +59,9 @@ export function BarraLateral() {
             ))}
           </>
         )}
+        <Enlace href="/acerca" activo={ruta === "/acerca"} icono={Info}>
+          Acerca de la app
+        </Enlace>
       </nav>
 
       {yo && (
