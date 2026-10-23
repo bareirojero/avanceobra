@@ -32,8 +32,8 @@ export default function Ingresar() {
       <form onSubmit={entrar} className="tarjeta flex w-full max-w-sm flex-col gap-5 p-8">
         <div className="flex flex-col items-center gap-3 text-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/marca/avance-de-obra-app.png" alt="" className="size-20" />
-          <h1 className="titulo text-2xl">Avance de Obra</h1>
+          <img src="/marca/reporte-app.png" alt="" className="size-20" />
+          <h1 className="titulo text-2xl">ReporTE</h1>
         </div>
         <label>
           <span className="etiqueta">Usuario</span>

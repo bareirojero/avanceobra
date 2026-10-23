@@ -12,7 +12,7 @@ export interface Marca {
   tenue: string; // texto secundario (pasa 4.5:1 sobre blanco)
   linea: string;
   fondo: string;
-  logo: string; // data URI del ícono de Avance de Obra
+  logo: string; // data URI del ícono de ReporTE
 }
 
 /** Todo lo que el PDF necesita resolver a partir de ids. */
@@ -75,8 +75,8 @@ export async function armarReferencias(
     fechaLarga: fechaLarga(datos.fecha),
     fechaCorta: fechaCorta(datos.fecha),
     pie: opciones.revisadoPor
-      ? `Avance de Obra · Armado con los registros de campo. Revisado por ${opciones.revisadoPor}.`
-      : "Avance de Obra · Borrador armado con los registros de campo. Pendiente de revisión.",
+      ? `ReporTE · Armado con los registros de campo. Revisado por ${opciones.revisadoPor}.`
+      : "ReporTE · Borrador armado con los registros de campo. Pendiente de revisión.",
     usuario: (id) => usuarios.get(id),
     sector: (id) => datos.sectores.find((s) => s.id === id)?.nombre,
     item: (id) => {

@@ -142,7 +142,7 @@ export default function Usuarios() {
 }
 
 function Credenciales({ usuario, clave, cerrar }: { usuario: string; clave: string; cerrar: () => void }) {
-  const texto = `Avance de Obra\nUsuario: ${usuario}\nContraseña: ${clave}`;
+  const texto = `ReporTE\nUsuario: ${usuario}\nContraseña: ${clave}`;
   const [copiado, setCopiado] = useState(false);
   return (
     <div className="flex flex-col gap-4">
