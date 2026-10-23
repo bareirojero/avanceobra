@@ -1,7 +1,7 @@
 // Prueba de punta a punta contra Postgres y Azurite locales con los datos de
 // db/seed/desarrollo.sql. Requiere las variables de .env.example.
 
-import { idParte, rutaFoto, rutaMiniatura } from '@registro-obra/contrato';
+import { idParte, rutaFoto, rutaFotoPedido, rutaMiniatura } from '@registro-obra/contrato';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
@@ -255,4 +255,27 @@ test('materiales: catálogo, pedido desde campo y planilla', async () => {
   }
   const catalogo = (await pedir('GET', '/materiales', editor.acceso)).json;
   assert.deepEqual(catalogo.map((m: { codigo: string }) => m.codigo), ['MAT-001']);
+
+  // Material que no está en el catálogo, escrito a mano, con una foto de referencia.
+  const yoCampo = campo.yo.usuario.id;
+  const ruta = rutaFotoPedido(OBRA, yoCampo, randomUUID());
+  const ajena = rutaFotoPedido(OBRA, editor.yo.usuario.id, randomUUID());
+  assert.equal((await pedir('POST', '/archivos/subida', campo.acceso, { ruta: ajena, content_type: 'image/jpeg' })).estado, 403);
+  const subida = await pedir('POST', '/archivos/subida', campo.acceso, { ruta, content_type: 'image/jpeg' });
+  assert.equal(subida.estado, 200, JSON.stringify(subida.json));
+  const put = await abrir(subida.json.url, { method: 'PUT', headers: subida.json.encabezados, body: JPG });
+  assert.ok(put.status >= 200 && put.status < 300);
+  const libre = { ...p, material_id: null, material_texto: 'Clavos 2 1/2"', unidad_texto: 'KG', fotos: [ruta] };
+  assert.equal((await pedir('PUT', `/pedidos/${randomUUID()}`, campo.acceso, { ...libre, material_texto: ' ' })).estado, 422);
+  assert.equal((await pedir('PUT', `/pedidos/${randomUUID()}`, campo.acceso, { ...libre, fotos: [ajena] })).estado, 403);
+  const idLibre = randomUUID();
+  const r3 = await pedir('PUT', `/pedidos/${idLibre}`, campo.acceso, libre);
+  assert.equal(r3.estado, 200, JSON.stringify(r3.json));
+  const fila = (await pedir('GET', `/obras/${OBRA}/pedidos`, lector.acceso)).json.find((x: { id: string }) => x.id === idLibre);
+  assert.equal(fila.material_codigo, 'CREAR RECURSO EN SAP');
+  assert.equal(fila.material_descripcion, 'Clavos 2 1/2"');
+  assert.equal(fila.material_unidad, 'KG');
+  assert.deepEqual(fila.fotos, [ruta]);
+  const ver = await pedir('POST', '/archivos/ver', lector.acceso, { rutas: [ruta] });
+  assert.equal((await abrir(ver.json.urls[ruta])).status, 200);
 });

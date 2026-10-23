@@ -218,12 +218,18 @@ export interface PedidoMaterial extends Sincronizable {
   id: Uuid; // uuid v4 generado en el teléfono
   obra_id: Uuid;
   autor_id: Uuid;
-  material_id: Uuid;
+  material_id: Uuid | null; // null: material escrito a mano (no está en el catálogo)
+  material_texto: string | null; // el material escrito a mano
+  unidad_texto: string | null;
   item_id: Uuid; // sector: un ítem del itemizado (no título)
   cantidad: number;
   necesario_para: Fecha | null;
   pedido_en: Instante;
+  fotos: string[]; // rutaFotoPedido(...), solo de referencia
 }
+
+/** Código que sale en el Excel para un material escrito a mano. */
+export const CODIGO_MATERIAL_NUEVO = 'CREAR RECURSO EN SAP';
 
 // -----------------------------------------------------------------------------
 // Contenido del informe (jsonb). Dueño de la forma: services/informes
@@ -286,6 +292,7 @@ export const FOTO = { ladoMayor: 2048, calidad: 0.8, miniaturaLadoMayor: 400, mi
 
 export const rutaFoto = (obra: Uuid, autor: Uuid, foto: Uuid) => `fotos/${obra}/${autor}/${foto}.jpg`;
 export const rutaMiniatura = (obra: Uuid, autor: Uuid, foto: Uuid) => `fotos/${obra}/${autor}/${foto}_mini.jpg`;
+export const rutaFotoPedido = (obra: Uuid, autor: Uuid, foto: Uuid) => `pedidos/${obra}/${autor}/${foto}.jpg`;
 export const rutaInforme = (obra: Uuid, informe: Uuid) => `informes/${obra}/${informe}.pdf`;
 
 /** Número visible del informe, ej. "ODD-001-007" (obras.sigla + correlativo de la base). */
@@ -384,7 +391,10 @@ export type FotoPedido = Omit<Foto, 'id' | 'autor_id' | 'descripcion_ia' | 'crea
 export type AnotacionPedido = Omit<Anotacion, 'id' | 'autor_id' | 'creado_en' | 'actualizado_en'>;
 // Borrar = PUT con eliminado_en. Campo solo corrige lo suyo del mismo día.
 /** PUT /api/pedidos/:id (idempotente: si ya existe, devuelve el guardado) */
-export type PedidoMaterialPedido = Pick<PedidoMaterial, 'obra_id' | 'material_id' | 'item_id' | 'cantidad' | 'necesario_para' | 'pedido_en'>;
+export type PedidoMaterialPedido = Pick<
+  PedidoMaterial,
+  'obra_id' | 'material_id' | 'material_texto' | 'unidad_texto' | 'item_id' | 'cantidad' | 'necesario_para' | 'pedido_en' | 'fotos'
+>;
 
 // --- Archivos ---
 
@@ -440,7 +450,7 @@ export interface FilaMaterial {
 /** GET /api/obras/:obraId/pedidos → todos los pedidos de la obra, para el Excel (editor y solo lectura) */
 export interface PedidoMaterialDetalle extends PedidoMaterial {
   autor_nombre: string;
-  material_codigo: string;
+  material_codigo: string; // CODIGO_MATERIAL_NUEVO si se escribió a mano
   material_descripcion: string;
   material_unidad: string | null;
   item_codigo: string;

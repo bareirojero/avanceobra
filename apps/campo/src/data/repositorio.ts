@@ -1,6 +1,7 @@
 import {
   idParte,
   rutaFoto,
+  rutaFotoPedido,
   rutaMiniatura,
   type Anotacion,
   type Foto,
@@ -21,7 +22,7 @@ import type { SQLiteDatabase } from 'expo-sqlite';
 import type { Marca } from '@/domain/marcas';
 
 import { encolarArchivo, encolarUpsert } from './cola-local';
-import { db } from './db';
+import { db, enTransaccion } from './db';
 
 export const nuevoId = () => Crypto.randomUUID();
 const ahoraIso = () => new Date().toISOString();
@@ -186,7 +187,7 @@ export interface FotoAGuardar {
  * la foto, filas de las marcas.
  */
 export async function guardarFoto(d: FotoAGuardar): Promise<void> {
-  await (await db()).withExclusiveTransactionAsync(async (tx) => {
+  await enTransaccion(async (tx) => {
     const parte = await asegurarParte(tx, d.obraId, d.autorId, d.fecha);
     const grupos = [parte.id, d.id];
     const previa = await tx.getFirstAsync<Foto>('SELECT * FROM fotos WHERE id = ?', d.id);
@@ -306,7 +307,7 @@ async function siguienteOrden(tx: SQLiteDatabase, parteId: string): Promise<numb
 
 /** Borrado lógico de una foto y sus marcas. Si todavía no se había subido, se sube igual marcada como eliminada. */
 export async function eliminarFoto(id: string): Promise<void> {
-  await (await db()).withExclusiveTransactionAsync(async (tx) => {
+  await enTransaccion(async (tx) => {
     const foto = await tx.getFirstAsync<Foto>('SELECT * FROM fotos WHERE id = ?', id);
     if (!foto) return;
     const ahora = ahoraIso();
@@ -324,56 +325,75 @@ export async function materiales(): Promise<MaterialCampo[]> {
   return (await db()).getAllAsync<MaterialCampo>('SELECT * FROM materiales WHERE eliminado_en IS NULL ORDER BY orden');
 }
 
-export interface PedidoLocal extends PedidoMaterial {
+export interface PedidoLocal extends Omit<PedidoMaterial, 'fotos'> {
   material: string;
   unidad: string | null;
+  fotos: number;
   estado: EstadoEnvio;
   error: string | null;
 }
 
 /** Pedidos de esta persona en la obra (los hechos desde este teléfono), del más nuevo al más viejo. */
 export async function misPedidos(obraId: string, autorId: string): Promise<PedidoLocal[]> {
-  const filas = await (await db()).getAllAsync<Omit<PedidoLocal, 'estado'> & { en_cola: number }>(
-    `SELECT p.*, COALESCE(m.descripcion, 'Material') AS material, m.unidad,
-       (SELECT c.error FROM cola_salida c WHERE c.tabla = 'pedidos_materiales' AND c.fila_id = p.id AND c.error IS NOT NULL LIMIT 1) AS error,
-       EXISTS (SELECT 1 FROM cola_salida c WHERE c.tabla = 'pedidos_materiales' AND c.fila_id = p.id) AS en_cola
+  const filas = await (await db()).getAllAsync<Omit<PedidoLocal, 'estado' | 'fotos'> & { en_cola: number; fotos: string }>(
+    `SELECT p.*, COALESCE(m.descripcion, p.material_texto, 'Material') AS material, COALESCE(m.unidad, p.unidad_texto) AS unidad,
+       (SELECT c.error FROM cola_salida c WHERE c.grupos LIKE '%"' || p.id || '"%' AND c.error IS NOT NULL LIMIT 1) AS error,
+       EXISTS (SELECT 1 FROM cola_salida c WHERE c.grupos LIKE '%"' || p.id || '"%') AS en_cola
      FROM pedidos_materiales p LEFT JOIN materiales m ON m.id = p.material_id
      WHERE p.obra_id = ? AND p.autor_id = ? AND p.eliminado_en IS NULL
      ORDER BY p.pedido_en DESC LIMIT 200`,
     obraId, autorId,
   );
-  return filas.map(({ en_cola, ...p }) => ({ ...p, estado: p.error ? 'error' : en_cola ? 'pendiente' : 'subida' }));
+  return filas.map(({ en_cola, fotos, ...p }) => ({
+    ...p,
+    fotos: (JSON.parse(fotos || '[]') as unknown[]).length,
+    estado: p.error ? 'error' : en_cola ? 'pendiente' : 'subida',
+  }));
 }
 
 export interface PedidoAGuardar {
   obraId: string;
   autorId: string;
-  materialId: string;
+  /** Del catálogo; null si el material se escribió a mano. */
+  materialId: string | null;
+  materialTexto: string | null;
+  unidadTexto: string | null;
   itemId: string;
   cantidad: number;
   necesarioPara: string | null;
+  /** Fotos de referencia ya comprimidas en el teléfono: id y archivo. */
+  fotos: { id: string; archivoLocal: string }[];
 }
 
-/** Guarda el pedido en el teléfono y encola su envío (PUT /api/pedidos/:id). */
+/**
+ * Guarda el pedido en el teléfono y encola su envío: primero las fotos de referencia,
+ * después la fila (PUT /api/pedidos/:id).
+ */
 export async function guardarPedido(d: PedidoAGuardar): Promise<void> {
   const ahora = ahoraIso();
+  const id = nuevoId();
+  const fotos = d.fotos.map((f) => ({ ...f, ruta: rutaFotoPedido(d.obraId, d.autorId, f.id) }));
   const p: PedidoMaterial = {
-    id: nuevoId(), obra_id: d.obraId, autor_id: d.autorId, material_id: d.materialId, item_id: d.itemId,
-    cantidad: d.cantidad, necesario_para: d.necesarioPara, pedido_en: ahora,
-    creado_en: ahora, actualizado_en: ahora, eliminado_en: null,
+    id, obra_id: d.obraId, autor_id: d.autorId, material_id: d.materialId,
+    material_texto: d.materialId ? null : d.materialTexto, unidad_texto: d.materialId ? null : d.unidadTexto,
+    item_id: d.itemId, cantidad: d.cantidad, necesario_para: d.necesarioPara, pedido_en: ahora,
+    fotos: fotos.map((f) => f.ruta), creado_en: ahora, actualizado_en: ahora, eliminado_en: null,
   };
   const fila: PedidoMaterialPedido = {
-    obra_id: p.obra_id, material_id: p.material_id, item_id: p.item_id, cantidad: p.cantidad,
-    necesario_para: p.necesario_para, pedido_en: p.pedido_en,
+    obra_id: p.obra_id, material_id: p.material_id, material_texto: p.material_texto, unidad_texto: p.unidad_texto,
+    item_id: p.item_id, cantidad: p.cantidad, necesario_para: p.necesario_para, pedido_en: p.pedido_en, fotos: p.fotos,
   };
-  await (await db()).withExclusiveTransactionAsync(async (tx) => {
+  await enTransaccion(async (tx) => {
     await tx.runAsync(
-      `INSERT INTO pedidos_materiales (id, obra_id, autor_id, material_id, item_id, cantidad, necesario_para, pedido_en,
-         creado_en, actualizado_en, eliminado_en)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      p.id, p.obra_id, p.autor_id, p.material_id, p.item_id, p.cantidad, p.necesario_para, p.pedido_en,
-      p.creado_en, p.actualizado_en, p.eliminado_en,
+      `INSERT INTO pedidos_materiales (id, obra_id, autor_id, material_id, material_texto, unidad_texto, item_id, cantidad,
+         necesario_para, pedido_en, fotos, creado_en, actualizado_en, eliminado_en)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      p.id, p.obra_id, p.autor_id, p.material_id, p.material_texto, p.unidad_texto, p.item_id, p.cantidad,
+      p.necesario_para, p.pedido_en, JSON.stringify(p.fotos), p.creado_en, p.actualizado_en, p.eliminado_en,
     );
+    for (const f of fotos) {
+      await encolarArchivo(tx, { tipo: 'subir_archivo', id: f.id, ruta: f.ruta, uriLocal: f.archivoLocal, contentType: 'image/jpeg' }, [id]);
+    }
     await encolarUpsert(tx, 'pedidos', p.id, fila, [p.id]);
   });
 }

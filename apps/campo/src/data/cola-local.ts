@@ -3,7 +3,7 @@ import type { SQLiteDatabase } from 'expo-sqlite';
 
 import type { AlmacenCola, EntradaCola } from '@/domain/cola';
 
-import { db } from './db';
+import { db, enTransaccion } from './db';
 
 interface FilaCola {
   seq: number;
@@ -84,8 +84,7 @@ export const almacenCola: AlmacenCola = {
   },
 
   async quitar(seq, rev) {
-    const base = await db();
-    await base.withExclusiveTransactionAsync(async (tx) => {
+    await enTransaccion(async (tx) => {
       const fila = await tx.getFirstAsync<{ tabla: string | null; fila_id: string }>(
         'SELECT tabla, fila_id FROM cola_salida WHERE seq = ? AND rev = ?',
         seq,
