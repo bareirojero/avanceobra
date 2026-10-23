@@ -1,0 +1,15 @@
+# Mantiene despiertos la web y la API en Render (plan gratis) en horario de obra:
+# lunes a sábado de 6 a 19 h de Paraguay (UTC-3). Fuera de ese horario se duermen
+# para no pasar las 750 horas gratis del mes (2 servicios × 13 h × 26 días ≈ 680 h).
+name: Despertador
+on:
+  schedule:
+    - cron: "*/10 9-21 * * 1-6"
+  workflow_dispatch:
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          curl -fsS -o /dev/null --max-time 90 -w "web %{http_code}\n" https://avance-obra-web.onrender.com/ingresar || true
+          curl -fsS -o /dev/null --max-time 90 -w "api %{http_code}\n" https://avance-obra-api.onrender.com/salud || true
