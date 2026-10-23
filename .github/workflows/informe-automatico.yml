@@ -1,0 +1,44 @@
+# Todos los días a las 23:55 de Paraguay (UTC-3) genera el informe diario de cada
+# obra que tiene fotos del día y nadie armó a mano. Queda como borrador, marcado
+# "Automático" en el panel, para que el editor lo revise y lo publique.
+# Secreto del repositorio TAREAS_SECRETO: la misma clave que la variable
+# TAREAS_SECRETO de avance-obra-api en Render (ver docs/DESPLIEGUE.md).
+name: Informe automático
+on:
+  schedule:
+    - cron: "55 2 * * *"
+  workflow_dispatch:
+    inputs:
+      fecha:
+        description: "Día a informar (AAAA-MM-DD). Vacío: el día que termina."
+        required: false
+concurrency: informe-automatico
+jobs:
+  generar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      API: https://avance-obra-api.onrender.com
+      TAREAS_SECRETO: ${{ secrets.TAREAS_SECRETO }}
+      FECHA: ${{ inputs.fecha }}
+    steps:
+      - name: Despertar la API
+        # A esta hora Render la tiene dormida (plan gratis): tarda hasta un par de minutos.
+        run: |
+          for i in $(seq 1 10); do
+            curl -fsS -o /dev/null --max-time 90 "$API/salud" && exit 0
+            sleep 15
+          done
+          echo "La API no despertó" && exit 1
+      - name: Generar los informes que faltan
+        # GitHub a veces dispara tarde: pasada la medianoche la API igual toma el día que terminó.
+        run: |
+          [ -z "$TAREAS_SECRETO" ] && echo "Falta el secreto TAREAS_SECRETO" && exit 1
+          cuerpo='{}'; [ -n "$FECHA" ] && cuerpo="{\"fecha\":\"$FECHA\"}"
+          curl -fsS --max-time 1800 -X POST "$API/api/tareas/informes-diarios" \
+            -H "Authorization: Bearer $TAREAS_SECRETO" -H "Content-Type: application/json" \
+            -d "$cuerpo" | tee resultado.json
+          echo
+          jq -r '.resultados[] | "\(.fecha)  \(.obra_id)  \(.estado)  \(.detalle // "")"' resultado.json
+          # Falla la corrida (y llega el aviso de GitHub) si algún informe dio error.
+          ! jq -e '.resultados[] | select(.estado == "error")' resultado.json > /dev/null

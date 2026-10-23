@@ -52,6 +52,8 @@ export const config = {
           tokenUrl: process.env.GOOGLE_TOKEN_URL ?? 'https://oauth2.googleapis.com/token',
         }
       : undefined,
+  /** Clave de las tareas programadas (informe automático de las 23:55). Sin ella, las tareas quedan apagadas. */
+  tareasSecreto: process.env.TAREAS_SECRETO || undefined,
   /** true detrás de HTTPS (producción): cookies Secure. */
   produccion: process.env.NODE_ENV === 'production',
   accesoMinutos: 60,

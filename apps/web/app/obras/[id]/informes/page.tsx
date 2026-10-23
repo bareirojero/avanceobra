@@ -7,7 +7,7 @@ import { numeroInforme } from "@registro-obra/contrato";
 import { api, ErrorDeApi } from "@/lib/api";
 import { useInformes, useObra } from "@/lib/datos";
 import { fechaLarga, hoy } from "@/lib/formato";
-import { ChipEstado, Encabezado, Vacio } from "@/components/ui";
+import { ChipAutomatico, ChipEstado, Encabezado, Vacio } from "@/components/ui";
 
 export default function Informes() {
   const { id } = useParams<{ id: string }>();
@@ -66,6 +66,7 @@ export default function Informes() {
                   <div className="text-sm tabular-nums text-tenue">{numeroInforme(obra.sigla, i.numero)}</div>
                 </div>
               </Link>
+              {editor && i.automatico && <ChipAutomatico />}
               {editor && <ChipEstado estado={i.estado} />}
               {i.estado === "publicado" && (
                 <a href={api.urlPdf(i.id)} className="boton-secundario h-9 text-sm" target="_blank" rel="noopener">
