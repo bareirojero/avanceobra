@@ -1,11 +1,15 @@
 // Cliente de la API (/api en el mismo origen). La sesión viaja en cookies httpOnly:
 // ante un 401 "no_autenticado" se renueva una vez y se reintenta.
 import type {
+  Anotacion,
+  AnotacionCambio,
   CambiarUsuarioPedido,
   ContenidoInforme,
   CrearUsuarioPedido,
   DiaRespuesta,
   ErrorApi,
+  Foto,
+  FotoCambio,
   FotoPedido,
   GenerarInformePedido,
   GenerarInformeRespuesta,
@@ -107,6 +111,9 @@ export const api = {
   /** Upsert idempotente: el parte agrupa las fotos de una persona en el día. */
   guardarParte: (id: string, p: PartePedido) => pedir<unknown>("PUT", `/partes/${id}`, p),
   guardarFoto: (id: string, f: FotoPedido) => pedir<unknown>("PUT", `/fotos/${id}`, f),
+  /** Corrige o borra una foto (queda en el historial). */
+  cambiarFoto: (id: string, c: FotoCambio) => pedir<Foto>("PATCH", `/fotos/${id}`, c),
+  cambiarAnotacion: (id: string, c: AnotacionCambio) => pedir<Anotacion>("PATCH", `/anotaciones/${id}`, c),
 
   informes: (obra: string) => get<Informe[]>(`/obras/${obra}/informes`),
   informe: (id: string) => get<Informe>(`/informes/${id}`),

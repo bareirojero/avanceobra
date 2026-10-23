@@ -79,12 +79,18 @@ export function useDia(obraId: string, fecha: string) {
     refreshInterval: (d) => (d?.informe?.estado === "generando" ? 3000 : 60000),
   });
   const dia = useMemo(() => {
-    const fotos = (data?.fotos ?? []).filter((f) => !f.eliminado_en).sort((a, b) => a.tomada_en.localeCompare(b.tomada_en));
+    const todas = (data?.fotos ?? []).sort((a, b) => a.tomada_en.localeCompare(b.tomada_en));
+    const fotos = todas.filter((f) => !f.eliminado_en);
     const ids = new Set(fotos.map((f) => f.id));
+    const marcas = (data?.anotaciones ?? []).sort((a, b) => a.numero - b.numero);
     return {
       partes: (data?.partes ?? []).filter((p) => !p.eliminado_en),
       fotos,
-      anotaciones: (data?.anotaciones ?? []).filter((a) => ids.has(a.foto_id) && !a.eliminado_en).sort((a, b) => a.numero - b.numero),
+      anotaciones: marcas.filter((a) => ids.has(a.foto_id) && !a.eliminado_en),
+      // Solo llegan al editor: fotos borradas (para restaurarlas) y marcas borradas (para el historial).
+      borradas: todas.filter((f) => f.eliminado_en),
+      todasLasMarcas: marcas,
+      historial: data?.historial ?? [],
       registro: data?.registro ?? null,
       informe: data?.informe ?? null,
     };

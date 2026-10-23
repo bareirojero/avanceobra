@@ -493,10 +493,44 @@ export type MiembroPedido = Pick<ObraMiembro, 'rol' | 'cargo'>;
 export interface DiaRespuesta {
   fecha: Fecha;
   partes: ParteDiario[];
+  /** Vigentes y, para el editor, también las borradas (eliminado_en no nulo) para poder restaurarlas. */
   fotos: Foto[];
   anotaciones: Anotacion[];
   registro: RegistroDia | null;
   informe: Informe | null;
+  /** Cambios en las fotos del día (solo los ve el editor y el autor de cada foto). */
+  historial: CambioFoto[];
+}
+
+export type AccionHistorial = 'editar' | 'borrar' | 'restaurar';
+
+/** Un cambio en una foto o en una de sus marcas; lo registra la base, nunca la API. */
+export interface CambioFoto {
+  id: Uuid;
+  obra_id: Uuid;
+  foto_id: Uuid;
+  anotacion_id: Uuid | null; // null: cambio en la foto
+  usuario_id: Uuid | null;
+  accion: AccionHistorial;
+  /** { comentario: { antes, despues }, item_id: {...}, sector_id: {...}, geometria: {...} } */
+  cambios: Record<string, { antes: unknown; despues: unknown }>;
+  motivo: string | null;
+  creado_en: Instante;
+}
+
+/** PATCH /api/fotos/:id (editor, cualquier día; autor, el mismo día) → Foto */
+export interface FotoCambio {
+  item_id?: Uuid;
+  sector_id?: Uuid | null;
+  comentario?: string | null;
+  eliminada?: boolean; // true borra (lógico), false restaura
+  motivo?: string | null; // queda en el historial
+}
+/** PATCH /api/anotaciones/:id → Anotacion */
+export interface AnotacionCambio {
+  comentario?: string | null;
+  eliminada?: boolean;
+  motivo?: string | null;
 }
 
 // --- Informes ---

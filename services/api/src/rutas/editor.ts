@@ -5,7 +5,7 @@ import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { autenticar } from '../auth.ts';
 import { conUsuario } from '../db.ts';
-import { noEncontrado } from '../errores.ts';
+import { ErrorApi, noEncontrado, sinPermiso } from '../errores.ts';
 
 const uuid = z.string().uuid();
 const fecha = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
@@ -233,21 +233,84 @@ export async function rutasEditor(app: FastifyInstance) {
     const p = z.object({ obraId: uuid, fecha }).parse(pedido.params);
     return como(pedido, async (q) => {
       const partes = await q(`select * from partes_diarios where obra_id = $1 and fecha = $2 and eliminado_en is null`, [p.obraId, p.fecha]);
+      // El editor recibe también lo borrado, para restaurarlo y para leer el historial.
       const fotos = await q(
         `select f.* from fotos f join partes_diarios p on p.id = f.parte_id
-          where f.obra_id = $1 and p.fecha = $2 and f.eliminado_en is null order by f.tomada_en`,
+          where f.obra_id = $1 and p.fecha = $2 and (f.eliminado_en is null or soy_editor(f.obra_id)) order by f.tomada_en`,
         [p.obraId, p.fecha],
       );
+      const ids = fotos.map((f) => f.id);
       const anotaciones = await q(
-        `select * from anotaciones where foto_id = any($1) and eliminado_en is null order by foto_id, numero`,
-        [fotos.map((f) => f.id)],
+        `select * from anotaciones where foto_id = any($1) and (eliminado_en is null or soy_editor(obra_id))
+          order by foto_id, numero`,
+        [ids],
       );
+      const historial = await q(`select * from historial_fotos where foto_id = any($1) order by creado_en`, [ids]);
       const [registro] = await q(`select * from registros_dia where obra_id = $1 and fecha = $2`, [p.obraId, p.fecha]);
       const [informe] = await q(
         `select * from informes where obra_id = $1 and tipo = 'diario' and fecha_desde = $2 and eliminado_en is null`,
         [p.obraId, p.fecha],
       );
-      return { fecha: p.fecha, partes, fotos, anotaciones, registro: registro ?? null, informe: informe ?? null };
+      return { fecha: p.fecha, partes, fotos, anotaciones, registro: registro ?? null, informe: informe ?? null, historial };
+    });
+  });
+
+  // --- Corrección de fotos y marcas ---
+  // El editor corrige o borra cualquier foto de cualquier día; el autor, lo suyo el mismo
+  // día (RLS: puedo_corregir). Cada cambio queda en historial_fotos (trigger de la base).
+
+  const Motivo = z.string().trim().max(500).nullable().optional();
+
+  app.patch('/fotos/:id', async (pedido) => {
+    const { id } = IdParam.parse(pedido.params);
+    const c = z
+      .object({
+        item_id: uuid.optional(),
+        sector_id: uuid.nullable().optional(),
+        comentario: z.string().max(4000).nullable().optional(),
+        eliminada: z.boolean().optional(),
+        motivo: Motivo,
+      })
+      .parse(pedido.body);
+    const comentario = c.comentario === undefined ? undefined : c.comentario?.trim() || null;
+    return como(pedido, async (q) => {
+      if (c.sector_id) {
+        const [ok] = await q(`select 1 from sectores s join fotos f on f.obra_id = s.obra_id where f.id = $1 and s.id = $2`, [id, c.sector_id]);
+        if (!ok) throw new ErrorApi(422, 'datos_invalidos', 'El sector no es de esta obra');
+      }
+      await q(`select set_config('app.motivo', $1, true)`, [c.motivo ?? '']);
+      const [foto] = await q(
+        `update fotos set item_id = coalesce($2, item_id),
+                sector_id = case when $3 then $4 else sector_id end,
+                comentario = case when $5 then $6 else comentario end,
+                eliminado_en = case when $7::boolean is null then eliminado_en
+                                    when $7 then coalesce(eliminado_en, now()) else null end
+          where id = $1 returning *`,
+        [id, c.item_id ?? null, c.sector_id !== undefined, c.sector_id ?? null, comentario !== undefined, comentario ?? null,
+          c.eliminada ?? null],
+      );
+      if (!foto) throw sinPermiso('No podés corregir esta foto');
+      return foto;
+    });
+  });
+
+  app.patch('/anotaciones/:id', async (pedido) => {
+    const { id } = IdParam.parse(pedido.params);
+    const c = z
+      .object({ comentario: z.string().max(2000).nullable().optional(), eliminada: z.boolean().optional(), motivo: Motivo })
+      .parse(pedido.body);
+    const comentario = c.comentario === undefined ? undefined : c.comentario?.trim() || null;
+    return como(pedido, async (q) => {
+      await q(`select set_config('app.motivo', $1, true)`, [c.motivo ?? '']);
+      const [marca] = await q(
+        `update anotaciones set comentario = case when $2 then $3 else comentario end,
+                eliminado_en = case when $4::boolean is null then eliminado_en
+                                    when $4 then coalesce(eliminado_en, now()) else null end
+          where id = $1 returning *`,
+        [id, comentario !== undefined, comentario ?? null, c.eliminada ?? null],
+      );
+      if (!marca) throw sinPermiso('No podés corregir esta marca');
+      return marca;
     });
   });
 

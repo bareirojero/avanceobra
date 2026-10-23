@@ -132,6 +132,42 @@ test('login, permisos, fotos y sesiones', async () => {
   assert.ok(dia.json.fotos.some((f: { id: string }) => f.id === fotoId));
   assert.equal(dia.json.registro.clima, 'Soleado, 31 °C');
 
+  // El editor corrige la foto y una marca; cada cambio queda en el historial.
+  const sectores = (await pedir('GET', `/obras/${OBRA}/sectores`, editor.acceso)).json;
+  const corr = await pedir('PATCH', `/fotos/${fotoId}`, editor.acceso, {
+    comentario: '  Excavación de zanja, eje A  ', sector_id: sectores[0].id, motivo: 'Faltaba el eje',
+  });
+  assert.equal(corr.estado, 200, JSON.stringify(corr.json));
+  assert.equal(corr.json.comentario, 'Excavación de zanja, eje A');
+  assert.equal(corr.json.item_id, item.id); // lo que no se manda no cambia
+  assert.equal((await pedir('PATCH', `/fotos/${fotoId}`, editor.acceso, { item_id: titulo.id })).estado, 403);
+  assert.equal((await pedir('PATCH', `/fotos/${fotoId}`, editor.acceso, { sector_id: randomUUID() })).estado, 422);
+  const marca = await pedir('PATCH', `/anotaciones/${anot.json.id}`, editor.acceso, { comentario: 'Fisura en el muro' });
+  assert.equal(marca.json.comentario, 'Fisura en el muro');
+  // Reenviar lo mismo (la app reintenta) no deja registro.
+  assert.equal((await pedir('PUT', `/fotos/${fotoId}`, campo.acceso, { ...foto, comentario: corr.json.comentario, sector_id: sectores[0].id })).estado, 200);
+
+  const borrada = await pedir('PATCH', `/fotos/${fotoId}`, editor.acceso, { eliminada: true, motivo: 'Foto repetida' });
+  assert.ok(borrada.json.eliminado_en);
+  const diaCampo = await pedir('GET', `/obras/${OBRA}/dia/${hoy()}`, campo.acceso);
+  assert.ok(!diaCampo.json.fotos.some((f: { id: string }) => f.id === fotoId)); // campo no ve las borradas
+  const diaEditor = await pedir('GET', `/obras/${OBRA}/dia/${hoy()}`, editor.acceso);
+  assert.ok(diaEditor.json.fotos.some((f: { id: string; eliminado_en: string | null }) => f.id === fotoId && f.eliminado_en));
+  assert.equal((await pedir('PATCH', `/fotos/${fotoId}`, editor.acceso, { eliminada: false })).json.eliminado_en, null);
+
+  const historial = (await pedir('GET', `/obras/${OBRA}/dia/${hoy()}`, editor.acceso)).json.historial
+    .filter((h: { foto_id: string }) => h.foto_id === fotoId);
+  assert.deepEqual(historial.map((h: { accion: string }) => h.accion), ['editar', 'editar', 'editar', 'borrar', 'restaurar']);
+  const [, cambio, deMarca, borrado] = historial; // el primero es la corrección del autor ('Corregido')
+  assert.equal(cambio.usuario_id, editor.yo.usuario.id);
+  assert.equal(cambio.motivo, 'Faltaba el eje');
+  assert.deepEqual(cambio.cambios.comentario, { antes: 'Corregido', despues: 'Excavación de zanja, eje A' });
+  assert.deepEqual(Object.keys(cambio.cambios).sort(), ['comentario', 'sector_id']);
+  assert.equal(deMarca.anotacion_id, anot.json.id);
+  assert.equal(borrado.motivo, 'Foto repetida');
+  // El historial no se escribe desde la API.
+  await assert.rejects(pool.query(`insert into historial_fotos (obra_id, foto_id, accion) values ($1, $2, 'editar')`, [OBRA, fotoId]));
+
   // Renovación rotativa.
   const ren = await pedir('POST', '/auth/renovar', undefined, { renovacion: campo.renovacion });
   assert.equal(ren.estado, 200);

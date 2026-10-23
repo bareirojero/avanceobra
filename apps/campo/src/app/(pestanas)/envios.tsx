@@ -1,13 +1,13 @@
 import type { Item } from '@registro-obra/contrato';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { AlertTriangle, Check, Clock, RefreshCw, WifiOff } from 'lucide-react-native';
-import { FlatList, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import { FlatList, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Aviso } from '@/components/aviso';
-import { Texto } from '@/components/base';
+import { Chip, Texto } from '@/components/base';
 import { SesionVencida } from '@/components/sesion-vencida';
 import { tituloItem } from '@/components/selectores';
 import { adelantarReintentos, reintentarGrupo } from '@/data/cola-local';
@@ -31,6 +31,12 @@ export default function Envios() {
   );
 
   const { fotosEsperando: esperando, fotosConError: conError } = sync.resumen;
+  // Filtro por ítem: solo los ítems que tienen fotos hoy, en el orden del itemizado.
+  const [filtro, setFiltro] = useState<string | null>(null);
+  const fotos = datos?.fotos ?? [];
+  const itemsDelDia = (datos?.items ?? []).filter((i) => fotos.some((f) => f.item_id === i.id));
+  const elegido = itemsDelDia.some((i) => i.id === filtro) ? filtro : null;
+  const visibles = elegido ? fotos.filter((f) => f.item_id === elegido) : fotos;
 
   async function enviarAhora() {
     await adelantarReintentos();
@@ -41,7 +47,7 @@ export default function Envios() {
     <SafeAreaView style={s.pantalla} edges={['top']}>
       <Aviso />
       <FlatList
-        data={datos?.fotos ?? []}
+        data={visibles}
         keyExtractor={(f) => f.id}
         contentContainerStyle={s.contenido}
         ListHeaderComponent={
@@ -106,6 +112,20 @@ export default function Envios() {
               />
             </View>
 
+            {itemsDelDia.length > 1 && (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.filtros} accessibilityLabel="Filtrar por ítem">
+                <Chip texto={`Todas (${fotos.length})`} elegido={!elegido} onPress={() => setFiltro(null)} />
+                {itemsDelDia.map((i) => (
+                  <Chip
+                    key={i.id}
+                    texto={`${tituloItem(i)} (${fotos.filter((f) => f.item_id === i.id).length})`}
+                    elegido={elegido === i.id}
+                    onPress={() => setFiltro(elegido === i.id ? null : i.id)}
+                    style={{ maxWidth: 260 }}
+                  />
+                ))}
+              </ScrollView>
+            )}
           </View>
         }
         renderItem={({ item: f }) => (
@@ -164,6 +184,7 @@ const s = StyleSheet.create({
   filaEstado: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   tituloEstado: { fontFamily: fuente.displayBold, fontSize: 19 },
   textoEstado: { fontFamily: fuente.body, fontSize: 16, lineHeight: 23 },
+  filtros: { gap: 8, paddingHorizontal: 4 },
   wifi: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 48, paddingHorizontal: 4 },
   textoWifi: { fontFamily: fuente.bodySemi, fontSize: 16, color: color.ink },
   fila: { backgroundColor: color.surface, borderRadius: 14, padding: 10, flexDirection: 'row', alignItems: 'center', gap: 12 },
