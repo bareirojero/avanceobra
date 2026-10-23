@@ -1,4 +1,4 @@
-# App de campo (Avance de Obra)
+# App de campo (ReporTE)
 
 App Android (Expo / React Native) para capataces y residentes. Se mantiene lo más simple
 posible: sacar la foto, escribir qué se ve (y, si hace falta, marcar zonas numeradas con un

@@ -7,7 +7,7 @@ const inter = Inter({ subsets: ["latin"], display: "swap", variable: "--font-int
 const archivo = Archivo({ subsets: ["latin"], weight: ["600", "700", "800"], display: "swap", variable: "--font-archivo" });
 
 export const metadata: Metadata = {
-  title: "Avance de Obra",
+  title: "ReporTE",
   description: "Fotos y comentarios de campo, e informe diario de obra",
   icons: { apple: "/marca/apple-touch-icon.png" },
 };

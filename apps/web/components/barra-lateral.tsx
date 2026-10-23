@@ -36,8 +36,8 @@ export function BarraLateral() {
     <aside className="flex shrink-0 flex-col gap-6 bg-marca-fondo px-4 py-4 text-white md:sticky md:top-0 md:h-screen md:w-60 md:py-6 print:hidden">
       <Link href="/obras" className="flex items-center gap-2.5 px-2">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/marca/avance-de-obra-app.png" alt="" className="size-9" />
-        <span className="font-display text-base font-bold">Avance de Obra</span>
+        <img src="/marca/reporte-app.png" alt="" className="size-9" />
+        <span className="font-display text-base font-bold">ReporTE</span>
       </Link>
 
       <nav aria-label="Principal" className="flex flex-wrap gap-1 md:flex-col">

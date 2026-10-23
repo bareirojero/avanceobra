@@ -1,6 +1,6 @@
 # Panel web (Next.js)
 
-Panel del editor y vista de solo lectura de Avance de Obra.
+Panel del editor y vista de solo lectura de ReporTE.
 
 - **Editor:** día de obra (fotos agrupadas por ítem, persona o sector, con sus marcas y comentarios), subir fotos desde la computadora, itemizado desde el Excel de SAP, sectores, usuarios con usuario y contraseña, datos de la obra, y el informe diario: se arma con las fotos ordenadas por ítem, el editor escribe el resumen y los textos, carga clima y personal a mano, lo publica y lo descarga en PDF.
 - **Campo y solo lectura:** ven el día de obra y los informes publicados, sin editar nada.

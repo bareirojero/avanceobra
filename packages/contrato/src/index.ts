@@ -12,7 +12,7 @@ export type Instante = string;
 export type Fecha = string;
 
 export const ZONA_HORARIA = 'America/Asuncion';
-export const NOMBRE_APP = 'Avance de Obra';
+export const NOMBRE_APP = 'ReporTE';
 
 // -----------------------------------------------------------------------------
 // Enums

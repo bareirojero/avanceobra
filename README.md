@@ -1,4 +1,4 @@
-# Avance de Obra
+# ReporTE
 
 Registro diario de avance de obra. Capataces y residentes sacan fotos desde una app Android, las vinculan a un ítem del itemizado y comentan lo que ven, marcando zonas sobre la foto si hace falta. Desde la web, el editor revisa lo cargado, genera con IA un informe diario coherente, lo corrige y lo descarga en PDF.
 

@@ -142,7 +142,7 @@ export function informeHtml(c: ContenidoInforme, ref: Referencias): string {
       <h1>Obra: ${esc(ref.obra.codigo)} – ${esc(ref.obra.nombre)}</h1>
     </div>
     <div class="caja">
-      <img src="${m.logo}" alt="Avance de Obra">
+      <img src="${m.logo}" alt="ReporTE">
       <div><div class="t">INFORME DIARIO</div><div class="n">${esc(ref.numero)}</div><div class="f">${esc(ref.fechaCorta)}</div></div>
     </div>
   </div>
