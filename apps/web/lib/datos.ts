@@ -11,7 +11,9 @@ const opciones = { revalidateOnFocus: true, shouldRetryOnError: (e: unknown) => 
 export function useYo() {
   const { data, error, isLoading, mutate } = useSWR<Yo>("/yo", api.get, opciones);
   const sinSesion = error instanceof ErrorDeApi && error.estado === 401;
-  return { yo: sinSesion ? null : data, cargando: isLoading, mutate };
+  // Error que no es falta de sesión: la API no responde (p. ej. el servidor está despertando).
+  const caida = !!error && !sinSesion && !data;
+  return { yo: sinSesion ? null : data, cargando: isLoading, caida, mutate };
 }
 
 export function useObra(id: string | undefined) {
