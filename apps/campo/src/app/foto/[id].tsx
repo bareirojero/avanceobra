@@ -18,6 +18,7 @@ import { useEffect, useState } from 'react';
 import {
   Alert,
   BackHandler,
+  Keyboard,
   KeyboardAvoidingView,
   Pressable,
   ScrollView,
@@ -90,6 +91,7 @@ export default function EditorFoto() {
   const obraId = obra?.id;
   const usuarioId = sesion?.usuarioId;
   const { height: altoPantalla } = useWindowDimensions();
+  const teclado = useTecladoAbierto();
 
   const [imagen, setImagen] = useState<Imagen | null>(null);
   const [marcas, setMarcas] = useState<Marca[]>([]);
@@ -300,7 +302,9 @@ export default function EditorFoto() {
   return (
     <SafeAreaView style={s.oscuro} edges={['top', 'bottom']}>
       <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
-        <View style={{ height: altoPantalla * 0.5 }}>
+        {/* Con el teclado abierto la foto se achica y se esconden herramientas y pie: si no, el
+            campo de comentario queda sin lugar y el teclado lo tapa. */}
+        <View style={{ height: altoPantalla * (teclado ? 0.2 : 0.5) }}>
           <FotoConMarcas
             uri={imagen.uri}
             foto={imagen}
@@ -323,7 +327,7 @@ export default function EditorFoto() {
         </View>
 
         <View style={s.hoja}>
-          {editable && <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={s.herramientas}>
+          {editable && !teclado && <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={s.herramientas}>
             {HERRAMIENTAS.map(({ tipo, texto, icono: Icono }) => {
               const elegida = herramienta === tipo;
               return (
@@ -353,9 +357,11 @@ export default function EditorFoto() {
               <Texto v="etiqueta">
                 {activa === FOTO ? 'Comentario de la foto' : `Comentario de la marca ${marcaActiva?.numero}`}
               </Texto>
+              {/* No controlado: con `value`, si el JS se atrasa al redibujar la foto, Android vuelve a
+                  poner el texto viejo y el borrado no queda. `key` lo renueva al cambiar de marca. */}
               <TextInput
                 key={activa}
-                value={activa === FOTO ? comentario : (marcaActiva?.comentario ?? '')}
+                defaultValue={activa === FOTO ? comentario : (marcaActiva?.comentario ?? '')}
                 onChangeText={cambiarComentario}
                 placeholder={activa === FOTO ? 'Qué se ve, qué se hizo hoy' : 'Qué pasa en esta zona'}
                 placeholderTextColor={color.muted}
@@ -380,7 +386,7 @@ export default function EditorFoto() {
             )}
           </ScrollView>
 
-          <View style={s.pieHoja}>
+          {!teclado && <View style={s.pieHoja}>
             {editable ? (
               <BotonPrincipal texto="Siguiente: ítem" icono={ArrowRight} onPress={() => setPaso('item')} style={{ minHeight: 72 }} />
             ) : (
@@ -389,11 +395,24 @@ export default function EditorFoto() {
                 <Texto v="nota" style={{ flex: 1 }}>Las fotos se pueden corregir solo el día que se sacan.</Texto>
               </View>
             )}
-          </View>
+          </View>}
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
+}
+
+function useTecladoAbierto() {
+  const [abierto, setAbierto] = useState(false);
+  useEffect(() => {
+    const mostrar = Keyboard.addListener('keyboardDidShow', () => setAbierto(true));
+    const ocultar = Keyboard.addListener('keyboardDidHide', () => setAbierto(false));
+    return () => {
+      mostrar.remove();
+      ocultar.remove();
+    };
+  }, []);
+  return abierto;
 }
 
 function confirmar(sinComentario: Marca[]): Promise<boolean> {
