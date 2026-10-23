@@ -29,6 +29,18 @@ export function ChipEstado({ estado }: { estado: EstadoInforme }) {
   return <span className={`inline-flex h-[30px] items-center rounded-full px-3 text-[13px] font-bold ${e.clase}`}>{e.texto}</span>;
 }
 
+/** El informe lo armó el sistema a las 23:55 porque nadie lo había generado ese día. */
+export function ChipAutomatico() {
+  return (
+    <span
+      title="Nadie lo había armado a las 23:55 y el sistema lo generó solo. Revisalo antes de publicar."
+      className="inline-flex h-[30px] items-center rounded-full bg-fondo px-3 text-[13px] font-bold text-tenue"
+    >
+      Automático
+    </span>
+  );
+}
+
 export function Numero({ titulo, valor, peligro }: { titulo: string; valor: React.ReactNode; peligro?: boolean }) {
   return (
     <div className="tarjeta flex flex-col gap-1 px-5 py-4">

@@ -269,6 +269,46 @@ test('informe del día: generar, publicar y PDF', async () => {
   }
 });
 
+test('informe automático de las 23:55 para los días sin informe', { skip: !process.env.TAREAS_SECRETO }, async () => {
+  const editor = await entrar('editor');
+  const yoEditor = editor.yo.usuario.id;
+  const item = (await pedir('GET', `/obras/${OBRA}/items`, editor.acceso)).json.find((i: { es_titulo: boolean }) => !i.es_titulo);
+  // Fotos de un día que nadie informó.
+  const dia = '2025-06-10';
+  const parteId = idParte(OBRA, yoEditor, dia);
+  await pedir('PUT', `/partes/${parteId}`, editor.acceso, { obra_id: OBRA, fecha: dia });
+  const fotoId = randomUUID();
+  const f = await pedir('PUT', `/fotos/${fotoId}`, editor.acceso, {
+    parte_id: parteId, obra_id: OBRA, item_id: item.id, origen: 'web', tomada_en: `${dia}T14:00:00.000Z`,
+    archivo_path: rutaFoto(OBRA, yoEditor, fotoId), miniatura_path: rutaMiniatura(OBRA, yoEditor, fotoId),
+    comentario: 'Encofrado de vigas',
+  });
+  assert.equal(f.estado, 200, JSON.stringify(f.json));
+
+  const tarea = (clave?: string, body: unknown = {}) =>
+    app.inject({ method: 'POST', url: '/api/tareas/informes-diarios', headers: clave ? { authorization: `Bearer ${clave}` } : {}, payload: body as object });
+  assert.equal((await tarea()).statusCode, 401);
+  assert.equal((await tarea('otra-clave')).statusCode, 401);
+
+  // Corre "el día siguiente" y repasa el anterior.
+  const r = await tarea(process.env.TAREAS_SECRETO, { fecha: '2025-06-11' });
+  assert.equal(r.statusCode, 200, r.body);
+  const { dias, resultados } = r.json();
+  assert.deepEqual(dias, ['2025-06-10', '2025-06-11']);
+  const hecho = resultados.find((x: { obra_id: string; fecha: string }) => x.obra_id === OBRA && x.fecha === dia);
+  assert.equal(hecho?.estado, 'borrador', JSON.stringify(resultados));
+  const inf = (await pedir('GET', `/informes/${hecho.informe_id}`, editor.acceso)).json;
+  assert.equal(inf.automatico, true);
+  assert.equal(inf.generado_por, yoEditor);
+  assert.ok(inf.contenido.avances.length > 0);
+
+  // Ya informado: la siguiente corrida no lo vuelve a generar.
+  const segunda = await tarea(process.env.TAREAS_SECRETO, { fecha: '2025-06-11' });
+  assert.equal(segunda.statusCode, 200, segunda.body);
+  const otra = segunda.json();
+  assert.ok(!otra.resultados.some((x: { obra_id: string; fecha: string }) => x.obra_id === OBRA && x.fecha === dia));
+});
+
 test('materiales: catálogo, pedido desde campo y planilla', async () => {
   const editor = await entrar('editor');
   const campo = await entrar('capataz');

@@ -199,6 +199,7 @@ export interface Informe extends Sincronizable {
   modelo_ia: string | null;
   error: string | null;
   pdf_path: string | null;
+  automatico: boolean; // lo generó la tarea de las 23:55 porque nadie lo había armado
   generado_por: Uuid | null;
   publicado_por: Uuid | null;
   publicado_en: Instante | null;

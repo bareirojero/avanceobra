@@ -21,7 +21,7 @@ interface ModuloInformes {
 }
 const NOMBRE_MODULO = '@registro-obra/informes';
 let modulo: Promise<ModuloInformes> | undefined;
-const informes = () => (modulo ??= import(NOMBRE_MODULO) as Promise<ModuloInformes>);
+export const informes = () => (modulo ??= import(NOMBRE_MODULO) as Promise<ModuloInformes>);
 
 /** Almacen para el módulo de informes, actuando como el usuario indicado (RLS). */
 export function almacenPara(usuarioId: string) {
@@ -120,7 +120,7 @@ export function almacenPara(usuarioId: string) {
 }
 
 const SIN_CONTENIDO = `id, obra_id, tipo, numero, fecha_desde, fecha_hasta, estado, version_esquema, modelo_ia, error, pdf_path,
-  generado_por, publicado_por, publicado_en, creado_en, actualizado_en, eliminado_en`;
+  automatico, generado_por, publicado_por, publicado_en, creado_en, actualizado_en, eliminado_en`;
 
 export async function rutasInformes(app: FastifyInstance) {
   app.addHook('preHandler', autenticar);
@@ -163,7 +163,7 @@ export async function rutasInformes(app: FastifyInstance) {
       );
       if (actual && (p.avance_id || !p.forzar)) return { id: actual.id as string, existia: true };
       if (actual) {
-        await q(`update informes set estado = 'generando', error = null, generado_por = usuario_actual(),
+        await q(`update informes set estado = 'generando', error = null, generado_por = usuario_actual(), automatico = false,
                    publicado_por = null, publicado_en = null where id = $1`, [actual.id]);
         return { id: actual.id as string, existia: false };
       }

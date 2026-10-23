@@ -75,7 +75,20 @@ La API también sabe guardar en SharePoint (`ALMACEN=sharepoint`, con un registr
    - `API_URL_PUBLICA`: la URL que Render le da al servicio (por ejemplo `https://avance-obra-api.onrender.com`).
    - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REFRESH_TOKEN`: los del paso 1.
    - En `avance-obra-web`, `API_URL_INTERNA`: la misma URL de la API. La dirección del panel es la que Render le da a `avance-obra-web`.
+   - `TAREAS_SECRETO`: una clave larga inventada para el informe automático (ver abajo).
 3. Cada push a `main` despliega solo. `https://…/salud` responde `{"ok":true}` cuando está andando.
+
+### Informe automático de las 23:55
+
+Si a las 23:55 una obra activa tiene fotos del día y nadie armó el informe, el workflow
+"Informe automático" despierta la API y lo genera como borrador, marcado "Automático" en el
+panel para que el editor lo revise y lo publique. Lo firma el primer editor de la obra.
+Repasa también el día anterior, por si una noche no corrió.
+
+1. Inventar una clave larga y cargarla igual en los dos lados:
+   - Render > `avance-obra-api` > Environment: `TAREAS_SECRETO`.
+   - GitHub > Settings > Secrets and variables > Actions > New repository secret: `TAREAS_SECRETO`.
+2. Para probarlo o recuperar un día: Actions > "Informe automático" > Run workflow (con fecha o vacío).
 
 ## 4. Primer uso
 

@@ -7,7 +7,7 @@ import { numeroInforme, type Alerta, type ContenidoInforme, type PersonalEnObra 
 import { api } from "@/lib/api";
 import { useDia, useEquipo, useInforme, useItems, useObra, useSectores, useUrls } from "@/lib/datos";
 import { fechaNumerica, hora } from "@/lib/formato";
-import { ChipEstado, Vacio } from "@/components/ui";
+import { ChipAutomatico, ChipEstado, Vacio } from "@/components/ui";
 import { DocumentoInforme, type Seleccion } from "@/components/documento-informe";
 import { VisorFotos } from "@/components/visor-fotos";
 
@@ -173,6 +173,7 @@ export default function InformeDelDia() {
         <h1 className="titulo text-[22px]">
           Informe {numero} · {fechaNumerica(fecha).slice(0, 5)}
         </h1>
+        {editor && informe.automatico && <ChipAutomatico />}
         {editor && <ChipEstado estado={informe.estado} />}
         {editor && <EstadoDeGuardado estado={guardado} />}
         <div className="ml-auto flex flex-wrap gap-2">

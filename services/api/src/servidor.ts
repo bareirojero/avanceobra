@@ -10,6 +10,7 @@ import { rutasCampo } from './rutas/campo.ts';
 import { rutasEditor } from './rutas/editor.ts';
 import { rutasInformes } from './rutas/informes.ts';
 import { rutasMateriales } from './rutas/materiales.ts';
+import { rutasTareas } from './rutas/tareas.ts';
 
 export async function crearServidor() {
   const app = Fastify({
@@ -34,6 +35,7 @@ export async function crearServidor() {
       await api.register(rutasEditor);
       await api.register(rutasInformes);
       await api.register(rutasMateriales);
+      await api.register(rutasTareas);
     },
     { prefix: '/api' },
   );
