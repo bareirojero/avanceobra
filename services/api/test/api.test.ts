@@ -484,4 +484,28 @@ test('materiales: catálogo, pedido desde campo y planilla', async () => {
   assert.deepEqual(fila.fotos, [ruta]);
   const ver = await pedir('POST', '/archivos/ver', lector.acceso, { rutas: [ruta] });
   assert.equal((await abrir(ver.json.urls[ruta])).status, 200);
+
+  // Estado: todo pedido empieza en 'enviado'; solo el editor lo cambia, de a varios.
+  assert.equal(fila.estado, 'enviado');
+  const estado = (ids: string[], e: string, quien = editor) => pedir('PATCH', `/obras/${OBRA}/pedidos/estado`, quien.acceso, { ids, estado: e });
+  assert.equal((await estado([id], 'en_compra', campo)).estado, 403);
+  assert.equal((await estado([id], 'en_compra', lector)).estado, 403);
+  assert.equal((await estado([id], 'perdido')).estado, 422);
+  const cambio = await estado([id, idLibre], 'planificando');
+  assert.equal(cambio.estado, 200, JSON.stringify(cambio.json));
+  assert.equal(cambio.json.length, 2);
+  assert.equal(cambio.json[0].estado_cambiado_por, editor.yo.usuario.id);
+  assert.equal((await estado([id, idLibre], 'planificando')).json.length, 0); // sin cambios, no toca nada
+  await estado([idLibre], 'disponible');
+
+  // Campo baja sus pedidos (de todas las fechas) con el estado, y después solo lo cambiado.
+  const mios = await pedir('GET', `/obras/${OBRA}/mis-pedidos`, campo.acceso);
+  assert.equal(mios.estado, 200, JSON.stringify(mios.json));
+  const deCampo = new Map(mios.json.pedidos.map((x: { id: string; estado: string }) => [x.id, x.estado]));
+  assert.equal(deCampo.get(id), 'planificando');
+  assert.equal(deCampo.get(idLibre), 'disponible');
+  assert.equal((await pedir('GET', `/obras/${OBRA}/mis-pedidos`, editor.acceso)).json.pedidos.length, 0); // no son suyos
+  await estado([id], 'rechazado');
+  const despues = (await pedir('GET', `/obras/${OBRA}/mis-pedidos?desde=${encodeURIComponent(mios.json.hasta)}`, campo.acceso)).json;
+  assert.deepEqual(despues.pedidos.map((x: { id: string; estado: string }) => [x.id, x.estado]), [[id, 'rechazado']]);
 });

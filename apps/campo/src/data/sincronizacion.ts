@@ -1,4 +1,4 @@
-import { SOLAPE_CURSOR_MS, type SyncRespuesta } from '@registro-obra/contrato';
+import { SOLAPE_CURSOR_MS, type PedidoMaterial, type SyncRespuesta } from '@registro-obra/contrato';
 import NetInfo, { type NetInfoState } from '@react-native-community/netinfo';
 import * as BackgroundTask from 'expo-background-task';
 import * as TaskManager from 'expo-task-manager';
@@ -230,6 +230,41 @@ export async function bajarNovedades() {
       await guardarMateriales(tx, r.materiales ?? []);
     });
     await guardarAjuste(`cursor.${obra.id}`, r.hasta);
+    await bajarMisPedidos(obra.id);
+  }
+}
+
+/**
+ * Mis pedidos de materiales con su estado, de todas las fechas (también los hechos desde
+ * otro teléfono). Va con su propio cursor, aparte de la bajada de fotos: si falla (o la
+ * API todavía no tiene la ruta) no frena nada y se reintenta en la próxima pasada.
+ */
+async function bajarMisPedidos(obraId: string) {
+  try {
+    const clave = `cursor_pedidos.${obraId}`;
+    const cursor = await leerAjuste(clave);
+    const desde = cursor ? new Date(new Date(cursor).getTime() - SOLAPE_CURSOR_MS).toISOString() : null;
+    const r = await backend().misPedidos(obraId, desde);
+    if (r.pedidos.length) await enTransaccion((tx) => guardarPedidos(tx, r.pedidos));
+    await guardarAjuste(clave, r.hasta);
+  } catch (e) {
+    console.warn('Pedidos de materiales', e);
+  }
+}
+
+/** El pedido no se edita en el teléfono: lo del servidor (con el estado) manda. */
+async function guardarPedidos(tx: SQLiteDatabase, pedidos: PedidoMaterial[]) {
+  for (const p of pedidos) {
+    await tx.runAsync(
+      `INSERT INTO pedidos_materiales (id, obra_id, autor_id, material_id, material_texto, unidad_texto, item_id, cantidad,
+         necesario_para, pedido_en, fotos, estado, estado_cambiado_en, creado_en, actualizado_en, eliminado_en)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT (id) DO UPDATE SET estado = excluded.estado, estado_cambiado_en = excluded.estado_cambiado_en,
+         actualizado_en = excluded.actualizado_en, eliminado_en = excluded.eliminado_en`,
+      p.id, p.obra_id, p.autor_id, p.material_id, p.material_texto, p.unidad_texto, p.item_id, Number(p.cantidad),
+      p.necesario_para, p.pedido_en, JSON.stringify(p.fotos ?? []), p.estado ?? 'enviado', p.estado_cambiado_en,
+      p.creado_en, p.actualizado_en, p.eliminado_en,
+    );
   }
 }
 

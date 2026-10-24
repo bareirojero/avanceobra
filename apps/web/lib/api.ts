@@ -3,6 +3,7 @@
 import type {
   Anotacion,
   AnotacionCambio,
+  CambiarEstadoPedidosPedido,
   CambiarUsuarioPedido,
   ContenidoInforme,
   CrearUsuarioPedido,
@@ -27,6 +28,7 @@ import type {
   RevisionInforme,
   ObraPedido,
   PartePedido,
+  PedidoMaterial,
   PedidoMaterialDetalle,
   PedidoMaterialPedido,
   RegistroDia,
@@ -96,6 +98,8 @@ export const api = {
   materiales: () => get<Material[]>("/materiales"),
   importarMateriales: (p: ImportarMaterialesPedido) => pedir<ImportacionMateriales>("POST", "/materiales/importar", p),
   pedidos: (obra: string) => get<PedidoMaterialDetalle[]>(`/obras/${obra}/pedidos`),
+  /** Solo editor. Devuelve los pedidos que cambiaron. */
+  cambiarEstadoPedidos: (obra: string, p: CambiarEstadoPedidosPedido) => pedir<PedidoMaterial[]>("PATCH", `/obras/${obra}/pedidos/estado`, p),
   /** Upsert idempotente desde el celular (campo): si ya llegó, devuelve el guardado. */
   guardarPedido: (id: string, p: PedidoMaterialPedido) => pedir<unknown>("PUT", `/pedidos/${id}`, p),
 
