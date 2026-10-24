@@ -7,6 +7,7 @@ import { manejarError } from './errores.ts';
 import { rutasArchivos } from './rutas/archivos.ts';
 import { rutasAuth } from './rutas/auth.ts';
 import { rutasCampo } from './rutas/campo.ts';
+import { rutasDashboard } from './rutas/dashboard.ts';
 import { rutasEditor } from './rutas/editor.ts';
 import { rutasInformes } from './rutas/informes.ts';
 import { rutasMateriales } from './rutas/materiales.ts';
@@ -32,6 +33,7 @@ export async function crearServidor() {
       await api.register(rutasAuth);
       await api.register(rutasArchivos);
       await api.register(rutasCampo);
+      await api.register(rutasDashboard);
       await api.register(rutasEditor);
       await api.register(rutasInformes);
       await api.register(rutasMateriales);

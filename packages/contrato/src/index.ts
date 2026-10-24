@@ -18,7 +18,8 @@ export const NOMBRE_APP = 'ReporTE';
 // Enums
 // -----------------------------------------------------------------------------
 
-export type RolObra = 'editor' | 'campo' | 'lector';
+/** 'gerente': solo web, solo ve el Dashboard de la obra. */
+export type RolObra = 'editor' | 'campo' | 'lector' | 'gerente';
 export type CargoObra = 'capataz' | 'residente' | 'jefe_obra' | 'oficina_tecnica' | 'fiscal' | 'cliente' | 'otro';
 export type EstadoObra = 'activa' | 'pausada' | 'terminada' | 'archivada';
 export type TipoAnotacion = 'punto' | 'circulo' | 'rectangulo' | 'flecha' | 'trazo';
@@ -409,6 +410,28 @@ export interface FotoConUrls extends Foto {
   miniatura_url: string;
   anotaciones: Anotacion[];
 }
+/**
+ * GET /api/obras/:obraId/dashboard — situación de obra para el Dashboard: la fecha
+ * del último día con fotos (null si todavía no hay) y sus fotos, con URLs firmadas.
+ * Lo pide cualquier miembro de la obra, también el gerente.
+ */
+export interface DashboardRespuesta {
+  fecha: Fecha | null;
+  fotos: FotoDashboard[];
+}
+export interface FotoDashboard {
+  id: Uuid;
+  archivo_url: string;
+  miniatura_url: string;
+  ancho: number | null;
+  alto: number | null;
+  tomada_en: Instante;
+  comentario: string | null;
+  autor: string;
+  /** "21 · Excavación de zanja" */
+  item: string | null;
+}
+
 /** Días por página de mis-fotos (por defecto y máximo). */
 export const MIS_FOTOS_DIAS = { porDefecto: 7, maximo: 31 } as const;
 

@@ -9,7 +9,8 @@ import { useYo } from "@/lib/datos";
 import { hoy, ROLES } from "@/lib/formato";
 import { Encabezado, Modal, Vacio } from "@/components/ui";
 
-const destino = (o: Obra, rol: RolObra) => (rol === "editor" ? `/obras/${o.id}` : `/obras/${o.id}/informes`);
+const destino = (o: Obra, rol: RolObra) =>
+  rol === "editor" ? `/obras/${o.id}` : rol === "gerente" ? `/obras/${o.id}/dashboard` : `/obras/${o.id}/informes`;
 
 export default function Obras() {
   const router = useRouter();

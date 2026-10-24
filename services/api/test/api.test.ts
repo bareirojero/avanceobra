@@ -7,7 +7,7 @@ import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { after, before, test } from 'node:test';
 import { prepararAlmacen } from '../src/archivos.ts';
-import { pool } from '../src/db.ts';
+import { conUsuario, pool } from '../src/db.ts';
 import { crearServidor } from '../src/servidor.ts';
 
 const OBRA = 'c0000000-0000-4000-8000-000000000001';
@@ -421,4 +421,79 @@ test('materiales: catálogo, pedido desde campo y planilla', async () => {
   assert.deepEqual(fila.fotos, [ruta]);
   const ver = await pedir('POST', '/archivos/ver', lector.acceso, { rutas: [ruta] });
   assert.equal((await abrir(ver.json.urls[ruta])).status, 200);
+});
+
+test('gerente: solo el Dashboard, con las fotos del último día', async () => {
+  const editor = await entrar('editor');
+  const campo = await entrar('capataz');
+  const yoCampo = campo.yo.usuario.id;
+
+  // Una foto de hoy, para que el Dashboard tenga qué mostrar.
+  const item = (await pedir('GET', `/obras/${OBRA}/sync`, campo.acceso)).json.items.find((i: { es_titulo: boolean }) => !i.es_titulo);
+  const parteId = idParte(OBRA, yoCampo, hoy());
+  assert.equal((await pedir('PUT', `/partes/${parteId}`, campo.acceso, { obra_id: OBRA, fecha: hoy() })).estado, 200);
+  const fotoId = randomUUID();
+  const ruta = rutaFoto(OBRA, yoCampo, fotoId);
+  const subida = await pedir('POST', '/archivos/subida', campo.acceso, { ruta, content_type: 'image/jpeg' });
+  await abrir(subida.json.url, { method: 'PUT', headers: subida.json.encabezados, body: JPG });
+  const f = await pedir('PUT', `/fotos/${fotoId}`, campo.acceso, {
+    parte_id: parteId, obra_id: OBRA, item_id: item.id, tomada_en: new Date().toISOString(),
+    archivo_path: ruta, miniatura_path: rutaMiniatura(OBRA, yoCampo, fotoId), comentario: 'Para el Dashboard',
+  });
+  assert.equal(f.estado, 200, JSON.stringify(f.json));
+
+  const usuario = `ger${Date.now() % 100000}`;
+  const creado = await pedir('POST', '/usuarios', editor.acceso, { usuario, nombre: 'Gerente Prueba', clave: 'gerente1', rol: 'gerente', obra_id: OBRA });
+  assert.equal(creado.estado, 200, JSON.stringify(creado.json));
+  const gerente = await entrar(usuario, 'gerente1');
+  const yo = await pedir('GET', '/yo', gerente.acceso);
+  assert.equal(yo.estado, 200);
+  assert.equal(yo.json.obras.length, 1);
+  assert.equal(yo.json.obras[0].rol, 'gerente');
+
+  // Ve el Dashboard: la fecha del último día con fotos y esas fotos, que se pueden abrir.
+  const dash = await pedir('GET', `/obras/${OBRA}/dashboard`, gerente.acceso);
+  assert.equal(dash.estado, 200, JSON.stringify(dash.json));
+  assert.equal(dash.json.fecha, hoy());
+  const suya = dash.json.fotos.find((x: { id: string }) => x.id === fotoId);
+  assert.equal(suya.comentario, 'Para el Dashboard');
+  assert.equal(suya.autor, 'Capataz de prueba');
+  assert.ok(suya.item);
+  assert.equal((await abrir(suya.archivo_url)).status, 200);
+  assert.deepEqual(
+    (await pedir('GET', `/obras/${OBRA}/dashboard`, editor.acceso)).json.fotos.map((x: { id: string }) => x.id),
+    dash.json.fotos.map((x: { id: string }) => x.id),
+  );
+
+  // Nada más: la API le cierra el resto de los módulos.
+  for (const [metodo, url, body] of [
+    ['GET', `/obras/${OBRA}/sync`],
+    ['GET', `/obras/${OBRA}/items`],
+    ['GET', `/obras/${OBRA}/dia/${hoy()}`],
+    ['GET', `/obras/${OBRA}/historial?desde=${hoy()}&hasta=${hoy()}`],
+    ['GET', `/obras/${OBRA}/informes`],
+    ['GET', `/obras/${OBRA}/pedidos`],
+    ['GET', '/usuarios'],
+    ['GET', '/materiales'],
+    ['POST', '/archivos/ver', { rutas: [ruta] }],
+  ] as const) {
+    const r = await pedir(metodo, url, gerente.acceso, body);
+    assert.equal(r.estado, 403, `${metodo} ${url}: ${r.estado}`);
+  }
+
+  // Y en la base tampoco ve la carga ni el itemizado, aunque se saltee la API.
+  const [vista] = await conUsuario(gerente.yo.usuario.id, (q) =>
+    q(`select (select count(*) from items where obra_id = $1)::int as items,
+              (select count(*) from fotos where obra_id = $1)::int as fotos,
+              (select count(*) from obra_miembros where obra_id = $1)::int as miembros,
+              (select count(*) from obras where id = $1)::int as obras`, [OBRA]),
+  );
+  assert.deepEqual(vista, { items: 0, fotos: 0, miembros: 0, obras: 1 });
+
+  // Quien no es de la obra no ve su Dashboard.
+  const otro = `ajeno${Date.now() % 100000}`;
+  const ajenoId = (await pedir('POST', '/usuarios', editor.acceso, { usuario: otro, nombre: 'Ajeno', clave: 'ajeno123', rol: 'campo', obra_id: OBRA })).json.id;
+  assert.equal((await pedir('DELETE', `/obras/${OBRA}/miembros/${ajenoId}`, editor.acceso)).estado, 200);
+  const ajeno = await entrar(otro, 'ajeno123');
+  assert.equal((await pedir('GET', `/obras/${OBRA}/dashboard`, ajeno.acceso)).estado, 403);
 });

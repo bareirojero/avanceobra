@@ -13,7 +13,7 @@ export default function ElegirObra() {
   const { yo } = useYo();
   const [elegir, setElegir] = useState(false);
   const obras = (yo?.obras ?? []).filter(
-    (o) => !o.obra.eliminado_en && o.obra.estado !== "archivada" && (yo?.usuario.es_admin || o.rol !== "lector"),
+    (o) => !o.obra.eliminado_en && o.obra.estado !== "archivada" && (yo?.usuario.es_admin || (o.rol !== "lector" && o.rol !== "gerente")),
   );
 
   useEffect(() => {

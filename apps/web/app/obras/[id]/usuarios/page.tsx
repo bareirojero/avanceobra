@@ -12,8 +12,9 @@ const AYUDA_ROL: Record<RolObra, string> = {
   campo: "Saca fotos, comenta y pide materiales desde la app del teléfono.",
   editor: "Carga el itemizado, crea usuarios, sube fotos y publica los informes.",
   lector: "Mira el día de obra y los informes publicados y baja los pedidos de materiales. No edita nada.",
+  gerente: "Solo desde la web: ve el Dashboard de la obra y nada más.",
 };
-const ORDEN: RolObra[] = ["campo", "editor", "lector"];
+const ORDEN: RolObra[] = ["campo", "editor", "lector", "gerente"];
 
 /** Contraseña fácil de dictar: 3 letras y 4 números, sin letras que se confunden. */
 function claveAlAzar() {
@@ -57,7 +58,7 @@ export default function Usuarios() {
         if (!del.length) return null;
         return (
           <section key={rol} className="flex flex-col gap-2">
-            <h2 className="sobretitulo">{rol === "campo" ? "En campo" : rol === "editor" ? "Editores" : "Solo lectura"}</h2>
+            <h2 className="sobretitulo">{rol === "campo" ? "En campo" : rol === "editor" ? "Editores" : rol === "gerente" ? "Gerentes" : "Solo lectura"}</h2>
             <div className="tarjeta divide-y divide-borde">
               {del.map((m) => {
                 const soyYo = m.id === yo?.usuario.id;
