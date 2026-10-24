@@ -1,18 +1,16 @@
 "use client";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import useSWR from "swr";
+import useSWRInfinite from "swr/infinite";
 import { Package, RotateCw, Trash2 } from "lucide-react";
-import type { DiaRespuesta, Foto } from "@registro-obra/contrato";
+import type { Item, MisFotosRespuesta } from "@registro-obra/contrato";
 import { api } from "@/lib/api";
 import { descartarEnvio, escucharEnviados, reintentar, useCola, type EnvioFoto, type EnvioPedido } from "@/lib/cola-campo";
-import { useItems, useUrls, useYo } from "@/lib/datos";
-import { fechaLarga, hoy, hora, sumarDias } from "@/lib/formato";
+import { useItems } from "@/lib/datos";
+import { fechaLarga, hoy, hora } from "@/lib/formato";
 import { cantidadTexto } from "@/lib/itemizado";
 import { Miniatura, MiniaturaEnvio } from "@/components/campo/base";
 import { VerFoto } from "@/components/campo/ver-foto";
-
-const DIAS_POR_TANDA = 7;
 
 /**
  * Envíos: lo que espera señal arriba, y debajo mis fotos de todos los días, del más nuevo
@@ -22,10 +20,7 @@ export default function Envios() {
   const { id: obraId } = useParams<{ id: string }>();
   const cola = useCola();
   const { items } = useItems(obraId);
-  const [dias, setDias] = useState(DIAS_POR_TANDA);
   const [abierto, setAbierto] = useState<string | null>(null);
-  const fecha = hoy();
-
   const fotos = cola.envios.filter((e): e is EnvioFoto => e.tipo === "foto" && e.obraId === obraId);
   const pedidos = cola.envios.filter((e): e is EnvioPedido => e.tipo === "pedido" && e.obraId === obraId);
   const envioAbierto = fotos.find((e) => e.id === abierto);
@@ -73,52 +68,64 @@ export default function Envios() {
 
       <h2 className="titulo mb-1 text-lg">Mis fotos</h2>
       <p className="mb-3 text-sm text-tenue">Solo las fotos de hoy se pueden corregir.</p>
-      <div className="flex flex-col gap-5">
-        {Array.from({ length: dias }, (_, i) => (
-          <DiaMio key={i} obraId={obraId} fecha={sumarDias(fecha, -i)} editable={i === 0} items={items} />
-        ))}
-      </div>
-      <button type="button" className="boton-secundario mt-5 h-12 w-full" onClick={() => setDias(dias + DIAS_POR_TANDA)}>
-        Ver días anteriores
-      </button>
+      <MisFotos obraId={obraId} items={items} />
 
       {envioAbierto && <VerFoto envio={envioAbierto} items={items} cerrar={() => setAbierto(null)} />}
     </div>
   );
 }
 
-function DiaMio({ obraId, fecha, editable, items }: { obraId: string; fecha: string; editable: boolean; items: ReturnType<typeof useItems>["items"] }) {
-  const { yo } = useYo();
-  const { data, mutate } = useSWR<DiaRespuesta>(`/obras/${obraId}/dia/${fecha}`, api.get, { revalidateOnFocus: editable });
+/** Mis fotos de todos los días (GET /mis-fotos), de a 7 días con fotos. */
+function MisFotos({ obraId, items }: { obraId: string; items: Item[] }) {
+  const fecha = hoy();
+  const { data, size, setSize, isLoading, isValidating, mutate } = useSWRInfinite<MisFotosRespuesta>(
+    (i, anterior: MisFotosRespuesta | null) =>
+      i === 0 ? `/obras/${obraId}/mis-fotos` : anterior?.siguiente ? `/obras/${obraId}/mis-fotos?antes=${anterior.siguiente}` : null,
+    api.get,
+    { revalidateFirstPage: true },
+  );
   const [abierta, setAbierta] = useState<string | null>(null);
-  // Hoy: al terminar de enviar una foto aparece acá.
-  useEffect(() => (editable ? escucharEnviados(() => void mutate()) : undefined), [editable, mutate]);
-  const mias = (data?.fotos ?? []).filter((f) => f.autor_id === yo?.usuario.id && !f.eliminado_en).sort((a, b) => b.tomada_en.localeCompare(a.tomada_en));
-  const urls = useUrls(mias.map((f) => f.miniatura_path));
-  if (!mias.length) return null;
-  const foto: Foto | undefined = mias.find((f) => f.id === abierta);
+  // Al terminar de enviar una foto aparece acá.
+  useEffect(() => escucharEnviados(() => void mutate()), [mutate]);
+
+  const dias = (data ?? []).flatMap((p) => p.dias);
+  const hayMas = !!data?.[data.length - 1]?.siguiente;
+  const dia = dias.find((d) => d.fotos.some((f) => f.id === abierta));
+  const foto = dia?.fotos.find((f) => f.id === abierta);
 
   return (
-    <section>
-      <h3 className="mb-2 font-semibold first-letter:uppercase">
-        {fechaLarga(fecha)} <span className="font-normal text-tenue">· {mias.length === 1 ? "1 foto" : `${mias.length} fotos`}</span>
-      </h3>
-      <div className="grid grid-cols-3 gap-2">
-        {mias.map((f) => (
-          <Miniatura key={f.id} src={urls[f.miniatura_path]} estado="enviada" etiqueta={`Foto de las ${hora(f.tomada_en)}`} alTocar={() => setAbierta(f.id)} />
+    <>
+      {!isLoading && dias.length === 0 && <p className="text-tenue">Todavía no enviaste fotos en esta obra.</p>}
+      <div className="flex flex-col gap-5">
+        {dias.map((d) => (
+          <section key={d.fecha}>
+            <h3 className="mb-2 font-semibold first-letter:uppercase">
+              {fechaLarga(d.fecha)} <span className="font-normal text-tenue">· {d.fotos.length === 1 ? "1 foto" : `${d.fotos.length} fotos`}</span>
+            </h3>
+            <div className="grid grid-cols-3 gap-2">
+              {d.fotos.map((f) => (
+                <Miniatura key={f.id} src={f.miniatura_url} estado="enviada" etiqueta={`Foto de las ${hora(f.tomada_en)}`} alTocar={() => setAbierta(f.id)} />
+              ))}
+            </div>
+          </section>
         ))}
       </div>
-      {foto && (
+      {(hayMas || isLoading) && (
+        <button type="button" className="boton-secundario mt-5 h-12 w-full" disabled={isValidating} onClick={() => setSize(size + 1)}>
+          {isValidating ? "Cargando…" : "Ver días anteriores"}
+        </button>
+      )}
+      {foto && dia && (
         <VerFoto
           foto={foto}
-          fecha={fecha}
-          anotaciones={(data?.anotaciones ?? []).filter((a) => a.foto_id === foto.id && !a.eliminado_en)}
-          editable={editable}
+          fecha={dia.fecha}
+          anotaciones={foto.anotaciones}
+          editable={dia.fecha === fecha}
           alCambiar={() => void mutate()}
           items={items}
           cerrar={() => setAbierta(null)}
         />
       )}
-    </section>
+    </>
   );
 }
