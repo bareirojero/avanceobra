@@ -12,6 +12,9 @@ export interface Sesion {
   usuarioId: string;
 }
 
+// Lo único que puede pedir un usuario que solo es gerente (rol de solo Dashboard).
+const RUTAS_GERENTE = new Set(['/api/yo', '/api/auth/clave', '/api/obras/:obraId/dashboard']);
+
 declare module 'fastify' {
   interface FastifyRequest {
     sesion: Sesion;
@@ -50,9 +53,15 @@ export async function autenticar(pedido: FastifyRequest) {
     throw new ErrorApi(401, 'no_autenticado', 'La sesión venció');
   }
   const [fila] = await conUsuario(null, (q) =>
-    q<{ v: number | null }>('select version_sesion_vigente($1) as v', [usuarioId]),
+    q<{ v: number | null; gerente: boolean | null }>(
+      'select version_sesion_vigente($1) as v, solo_gerente($1) as gerente',
+      [usuarioId],
+    ),
   );
   if (fila?.v !== version) throw new ErrorApi(401, 'no_autenticado', 'La sesión ya no es válida');
+  if (fila.gerente && !RUTAS_GERENTE.has(pedido.routeOptions.url ?? '')) {
+    throw new ErrorApi(403, 'sin_permiso', 'Tu usuario solo tiene acceso al Dashboard');
+  }
   pedido.sesion = { usuarioId };
 }
 

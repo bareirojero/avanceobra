@@ -4,7 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { Building2, CalendarDays, ChartColumn, FileText, History, Info, ListChecks, LogOut, Package, Settings, Users } from "lucide-react";
 import { useSWRConfig } from "swr";
 import { api } from "@/lib/api";
-import { useObra, useYo } from "@/lib/datos";
+import { esSoloGerente, useObra, useYo } from "@/lib/datos";
 
 export function BarraLateral() {
   const ruta = usePathname();
@@ -15,8 +15,12 @@ export function BarraLateral() {
   const { obra, rol } = useObra(obraId);
   const base = `/obras/${obraId}`;
 
+  const soloGerente = esSoloGerente(yo);
+
   const deObra = !obra
     ? []
+    : rol === "gerente"
+    ? [{ href: `${base}/dashboard`, texto: "Dashboard", icono: ChartColumn, activo: ruta.startsWith(`${base}/dashboard`) }]
     : [
         { href: base, texto: "Día de obra", icono: CalendarDays, activo: ruta === base },
         { href: `${base}/informes`, texto: "Informes", icono: FileText, activo: ruta.startsWith(`${base}/informes`) },
@@ -45,9 +49,11 @@ export function BarraLateral() {
       </Link>
 
       <nav aria-label="Principal" className="flex flex-wrap gap-1 md:flex-col">
-        <Enlace href="/obras" activo={ruta === "/obras"} icono={Building2}>
-          Obras
-        </Enlace>
+        {(!soloGerente || (yo?.obras.length ?? 0) > 1) && (
+          <Enlace href="/obras" activo={ruta === "/obras"} icono={Building2}>
+            Obras
+          </Enlace>
+        )}
         {obra && (
           <>
             <div className="mt-3 hidden truncate px-3 pb-1 text-xs font-semibold uppercase tracking-wide text-sobre-tinta-tenue md:block">
@@ -60,9 +66,11 @@ export function BarraLateral() {
             ))}
           </>
         )}
-        <Enlace href="/acerca" activo={ruta === "/acerca"} icono={Info}>
-          Acerca de la app
-        </Enlace>
+        {!soloGerente && (
+          <Enlace href="/acerca" activo={ruta === "/acerca"} icono={Info}>
+            Acerca de la app
+          </Enlace>
+        )}
       </nav>
 
       {yo && (

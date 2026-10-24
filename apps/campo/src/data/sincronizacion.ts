@@ -214,7 +214,7 @@ export async function bajarNovedades() {
   });
 
   for (const { obra, rol } of yo.obras) {
-    if (rol === 'lector') continue; // Solo lectura no usa la app de campo.
+    if (rol === 'lector' || rol === 'gerente') continue; // Solo lectura y gerente no usan la app de campo.
     const cursor = await leerAjuste(`cursor.${obra.id}`);
     const desde = cursor ? new Date(new Date(cursor).getTime() - SOLAPE_CURSOR_MS).toISOString() : null;
     const r = await backend().novedades(obra.id, desde);

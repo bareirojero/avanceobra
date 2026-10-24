@@ -12,7 +12,7 @@ const MAX = 6;
 const limitar = (z: number) => Math.min(MAX, Math.max(MIN, z));
 
 export interface FotoEnVisor {
-  foto: Foto;
+  foto: Pick<Foto, "tomada_en" | "comentario" | "ancho" | "alto">;
   src: string | undefined;
   anotaciones: Anotacion[];
   autor: string;

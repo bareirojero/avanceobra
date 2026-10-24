@@ -39,6 +39,7 @@ export const ROLES: Record<RolObra, string> = {
   editor: "Editor",
   campo: "Campo",
   lector: "Solo lectura",
+  gerente: "Gerente",
 };
 
 export const CARGOS: Record<CargoObra, string> = {

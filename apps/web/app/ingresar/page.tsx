@@ -2,7 +2,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { api, ErrorDeApi } from "@/lib/api";
-import { useYo } from "@/lib/datos";
+import { esSoloGerente, useYo } from "@/lib/datos";
 import type { Yo } from "@registro-obra/contrato";
 
 /**
@@ -10,6 +10,7 @@ import type { Yo } from "@registro-obra/contrato";
  * pantalla de inicio, o si es alguien de campo desde un celular.
  */
 function irACampo(yo: Yo) {
+  if (esSoloGerente(yo)) return false;
   if (new URLSearchParams(location.search).has("campo")) return true;
   if (matchMedia("(display-mode: standalone)").matches) return true;
   const soloCampo = !yo.usuario.es_admin && yo.obras.length > 0 && yo.obras.every((o) => o.rol === "campo");

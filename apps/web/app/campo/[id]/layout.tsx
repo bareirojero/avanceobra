@@ -18,7 +18,7 @@ export default function MarcoCampo({ children }: { children: React.ReactNode }) 
   const { obra, rol, cargo } = useObra(id);
   const cola = useCola();
   const [perfil, setPerfil] = useState(false);
-  const cantidadObras = (yo?.obras ?? []).filter((o) => !o.obra.eliminado_en && o.rol !== "lector").length;
+  const cantidadObras = (yo?.obras ?? []).filter((o) => !o.obra.eliminado_en && o.rol !== "lector" && o.rol !== "gerente").length;
 
   useEffect(() => {
     if (yo) fijarUsuario(yo.usuario.id);
@@ -30,11 +30,11 @@ export default function MarcoCampo({ children }: { children: React.ReactNode }) 
   }, [obra]);
 
   if (!yo) return null;
-  if (!obra || rol === "lector") {
+  if (!obra || rol === "lector" || rol === "gerente") {
     return (
       <div className="movil grid min-h-dvh place-items-center bg-fondo px-6 text-center">
         <div className="flex flex-col gap-3">
-          <p className="titulo text-xl">{obra ? "En esta obra tu usuario es de solo lectura" : "No tenés acceso a esta obra"}</p>
+          <p className="titulo text-xl">{!obra ? "No tenés acceso a esta obra" : rol === "gerente" ? "Tu usuario es de gerente: entrá desde la computadora" : "En esta obra tu usuario es de solo lectura"}</p>
           <Link href="/campo?elegir" className="boton-principal">
             Elegir otra obra
           </Link>

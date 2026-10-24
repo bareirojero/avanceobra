@@ -2,7 +2,7 @@
 // Lecturas de la API para las pantallas, con caché y revalidación (SWR).
 import { useMemo } from "react";
 import useSWR from "swr";
-import type { CargoObra, DiaRespuesta, HistorialRespuesta, Informe, Item, Material, PedidoMaterialDetalle, RolObra, Sector, UsuarioConObras, Yo } from "@registro-obra/contrato";
+import type { CargoObra, DashboardRespuesta, DiaRespuesta, HistorialRespuesta, Informe, Item, Material, PedidoMaterialDetalle, RolObra, Sector, UsuarioConObras, Yo } from "@registro-obra/contrato";
 import { api, ErrorDeApi } from "./api";
 
 const opciones = { revalidateOnFocus: true, shouldRetryOnError: (e: unknown) => !(e instanceof ErrorDeApi && e.estado < 500) };
@@ -126,10 +126,25 @@ export function useInforme(id: string | undefined) {
 }
 
 /** URLs firmadas de lectura para rutas del almacenamiento (válidas 1 h; se renuevan a los 50 min). */
+/** Situación para el Dashboard: fecha del último día con fotos y sus fotos (URLs firmadas por 60 min). */
+export function useDashboard(obraId: string) {
+  const { data, isLoading } = useSWR<DashboardRespuesta>(`/obras/${obraId}/dashboard`, api.get, {
+    ...opciones,
+    refreshInterval: 10 * 60 * 1000,
+    revalidateOnFocus: false,
+  });
+  return { fecha: data?.fecha ?? null, fotos: data?.fotos ?? [], cargando: isLoading };
+}
+
 export function useUrls(rutas: string[]) {
   const clave = rutas.length ? ["/archivos/ver", ...[...new Set(rutas)].sort()] : null;
   const { data } = useSWR(clave, ([, ...r]: string[]) => api.ver(r).then((x) => x.urls), { refreshInterval: 50 * 60 * 1000, revalidateOnFocus: false });
   return data ?? {};
+}
+
+/** Usuario que solo es gerente: entra por la web y solo ve el Dashboard de sus obras. */
+export function esSoloGerente(yo: Yo | null | undefined) {
+  return !!yo && !yo.usuario.es_admin && yo.obras.length > 0 && yo.obras.every((o) => o.rol === "gerente");
 }
 
 /** "21 · Excavación de zanja" (número de ítem del itemizado + descripción). */

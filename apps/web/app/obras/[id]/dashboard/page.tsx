@@ -1,8 +1,11 @@
 "use client";
-// Maqueta del dashboard gerencial: datos de ejemplo fijos, todavía sin base ni carga.
+// Dashboard gerencial: las cifras de avance todavía son de ejemplo; la galería trae las fotos
+// reales del último día con fotos. Es lo único que ve el usuario Gerente.
 import { useParams } from "next/navigation";
-import { useObra } from "@/lib/datos";
+import { useDashboard, useObra } from "@/lib/datos";
+import { fechaLarga, fechaNumerica, hoy } from "@/lib/formato";
 import { Encabezado } from "@/components/ui";
+import { GaleriaDashboard } from "@/components/galeria-dashboard";
 
 interface Elemento {
   nombre: string;
@@ -45,14 +48,31 @@ const TOTALES = [suma("Unidad", "Total pilotes"), suma("m³", "Total estructura"
 export default function Dashboard() {
   const { id } = useParams<{ id: string }>();
   const { obra } = useObra(id);
+  const dashboard = useDashboard(id);
   if (!obra) return null;
+  // La situación es la del último día con fotos; sin fotos todavía, la de hoy.
+  const fecha = dashboard.fecha ?? hoy();
 
   return (
     <div className="mx-auto flex max-w-[1240px] flex-col gap-6 px-4 py-8 md:px-10">
+      {/* Misma cabecera de presentación que el Día de obra: video en loop sin sonido. */}
+      <video
+        className="aspect-[1168/350] w-full rounded-xl bg-white object-cover print:hidden"
+        src="/cabecera/dia-de-obra.mp4"
+        poster="/cabecera/dia-de-obra.jpg"
+        autoPlay
+        muted
+        loop
+        playsInline
+        preload="metadata"
+        aria-hidden="true"
+      />
       <Encabezado miga={obra.nombre} titulo="Dashboard gerencial" />
       <p className="rounded-[10px] bg-plano-suave px-4 py-2.5 text-sm font-semibold text-plano-texto">
-        Maqueta con datos de ejemplo. Todavía no está conectada a la obra.
+        {dashboard.cargando ? "Situación de obra" : `Situación de obra actualizada a ${fechaNumerica(fecha)}`} - VERSIÓN BETA del visor de obra
       </p>
+
+      <GaleriaDashboard fotos={dashboard.fotos} titulo={dashboard.fecha ? `Fotos del día · ${fechaLarga(dashboard.fecha)}` : "Fotos del día"} />
 
       <div className="grid gap-4 md:grid-cols-2">
         {TOTALES.map((t) => (
