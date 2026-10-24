@@ -89,3 +89,13 @@ textarea.campo {
     background: white;
   }
 }
+
+/* Versión de celular (/campo). Campos de 16 px: con menos, el iPhone hace zoom al escribir. */
+.movil {
+  -webkit-tap-highlight-color: transparent;
+}
+.movil input,
+.movil textarea,
+.movil select {
+  font-size: 16px;
+}

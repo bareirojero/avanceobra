@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Archivo, Inter } from "next/font/google";
 import { Guardia } from "@/components/guardia";
 import "./globals.css";
@@ -10,6 +10,15 @@ export const metadata: Metadata = {
   title: "ReporTE",
   description: "Fotos y comentarios de campo, e informe diario de obra",
   icons: { apple: "/marca/apple-touch-icon.png" },
+  // Agregada a la pantalla de inicio del iPhone se abre como app, sin barras de Safari.
+  appleWebApp: { capable: true, title: "ReporTE", statusBarStyle: "default" },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#0f1f3c",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

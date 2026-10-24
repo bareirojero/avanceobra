@@ -26,6 +26,7 @@ import type {
   ObraPedido,
   PartePedido,
   PedidoMaterialDetalle,
+  PedidoMaterialPedido,
   RegistroDia,
   RegistroDiaPedido,
   Sector,
@@ -93,6 +94,8 @@ export const api = {
   materiales: () => get<Material[]>("/materiales"),
   importarMateriales: (p: ImportarMaterialesPedido) => pedir<ImportacionMateriales>("POST", "/materiales/importar", p),
   pedidos: (obra: string) => get<PedidoMaterialDetalle[]>(`/obras/${obra}/pedidos`),
+  /** Upsert idempotente desde el celular (campo): si ya llegó, devuelve el guardado. */
+  guardarPedido: (id: string, p: PedidoMaterialPedido) => pedir<unknown>("PUT", `/pedidos/${id}`, p),
 
   sectores: (obra: string) => get<Sector[]>(`/obras/${obra}/sectores`),
   crearSector: (obra: string, s: SectorPedido) => pedir<Sector>("POST", `/obras/${obra}/sectores`, s),

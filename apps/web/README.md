@@ -4,6 +4,7 @@ Panel del editor y vista de solo lectura de ReporTE.
 
 - **Editor:** día de obra (fotos agrupadas por ítem, persona o sector, con sus marcas y comentarios), subir fotos desde la computadora, itemizado desde el Excel de SAP, sectores, usuarios con usuario y contraseña, datos de la obra, y el informe diario: se arma con las fotos ordenadas por ítem, el editor escribe el resumen y los textos, carga clima y personal a mano, lo publica y lo descarga en PDF.
 - **Campo y solo lectura:** ven el día de obra y los informes publicados, sin editar nada.
+- **Versión de celular (`/campo`):** para quienes cargan desde un iPhone (o cualquier celular sin la app de Android). Hoy (sacar foto con la cámara o subir archivo, con su ítem y comentario), Materiales (pedir material y ver mis pedidos con su estado) y Envíos (mis fotos de todos los días; las de hoy se corrigen). Lo cargado se guarda primero en el celular (IndexedDB) y se envía solo; sin señal queda esperando. Se instala en el iPhone desde Safari: Compartir › Agregar a inicio (abre directo en `/campo`). Usa las mismas rutas de la API que la app de Android, sin cambios en la base.
 
 Llama a la API por `/api` en el mismo origen: `next.config.ts` reescribe `/api/*` a `API_URL_INTERNA`. Así las cookies de sesión (httpOnly) quedan en el dominio del panel y no hace falta CORS. Las subidas a SharePoint, cuyas URLs firmadas apuntan a la API, también pasan por ese mismo origen.
 
