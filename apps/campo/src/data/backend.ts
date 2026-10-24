@@ -1,4 +1,4 @@
-import type { SyncRespuesta, Yo } from '@registro-obra/contrato';
+import type { MisPedidosRespuesta, SyncRespuesta, Yo } from '@registro-obra/contrato';
 
 import type { Transporte } from '@/domain/cola';
 
@@ -25,6 +25,8 @@ export interface Backend {
   yo(): Promise<Yo>;
   /** GET /api/obras/:id/sync: lo cambiado en la obra después de `desde` (null = todo). */
   novedades(obraId: string, desde: string | null): Promise<SyncRespuesta>;
+  /** GET /api/obras/:id/mis-pedidos: mis pedidos de materiales (todas las fechas) cambiados después de `desde`. */
+  misPedidos(obraId: string, desde: string | null): Promise<MisPedidosRespuesta>;
 }
 
 /** Usuario o contraseña incorrectos (se muestra tal cual). */

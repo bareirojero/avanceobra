@@ -1,7 +1,7 @@
 // Materiales: catálogo de la organización (Excel) y pedidos de obra.
 // Campo pide desde la app; editor y solo lectura bajan los pedidos en Excel.
 
-import { CODIGO_MATERIAL_NUEVO } from '@registro-obra/contrato';
+import { CODIGO_MATERIAL_NUEVO, ESTADOS_PEDIDO } from '@registro-obra/contrato';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { autenticar } from '../auth.ts';
@@ -10,6 +10,7 @@ import { sinPermiso } from '../errores.ts';
 
 const uuid = z.string().uuid();
 const fecha = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+const instante = z.string().datetime({ offset: true });
 
 // Fotos de referencia del pedido: pedidos/{obra}/{autor}/{foto}.jpg
 export const RUTA_FOTO_PEDIDO = /^pedidos\/([0-9a-f-]{36})\/([0-9a-f-]{36})\/[0-9a-f-]{36}\.jpg$/;
@@ -22,7 +23,7 @@ const Pedido = z.object({
   item_id: uuid,
   cantidad: z.number().positive().max(1e12),
   necesario_para: fecha.nullable().optional(),
-  pedido_en: z.string().datetime({ offset: true }),
+  pedido_en: instante,
   fotos: z.array(z.string().regex(RUTA_FOTO_PEDIDO)).max(5).default([]),
 });
 
@@ -101,5 +102,41 @@ export async function rutasMateriales(app: FastifyInstance) {
         [obraId, CODIGO_MATERIAL_NUEVO],
       ),
     );
+  });
+
+  // El editor marca el estado de uno o varios pedidos de la obra a la vez.
+  app.patch('/obras/:obraId/pedidos/estado', async (pedido) => {
+    const { obraId } = z.object({ obraId: uuid }).parse(pedido.params);
+    const { ids, estado } = z
+      .object({ ids: z.array(uuid).min(1).max(2000), estado: z.enum(ESTADOS_PEDIDO) })
+      .parse(pedido.body);
+    return como(pedido, async (q) => {
+      const [{ editor }] = await q(`select soy_editor($1) as editor`, [obraId]);
+      if (!editor) throw sinPermiso('Solo un editor puede cambiar el estado de los pedidos');
+      // Solo los que cambian: así no se mueve actualizado_en (ni se re-bajan en los teléfonos) por nada.
+      return q(
+        `update pedidos_materiales set estado = $3, estado_cambiado_por = usuario_actual(), estado_cambiado_en = now()
+          where obra_id = $1 and id = any($2) and eliminado_en is null and estado <> $3
+          returning *`,
+        [obraId, ids, estado],
+      );
+    });
+  });
+
+  // Campo: sus propios pedidos de la obra, de todas las fechas (también los hechos desde otro teléfono),
+  // por cursor como /sync. Aparte de /sync para no tocar la bajada de fotos.
+  app.get('/obras/:obraId/mis-pedidos', async (pedido) => {
+    const { obraId } = z.object({ obraId: uuid }).parse(pedido.params);
+    const { desde } = z.object({ desde: instante.optional() }).parse(pedido.query);
+    return como(pedido, async (q) => {
+      const [{ hasta }] = await q(`select now() as hasta`);
+      const pedidos = await q(
+        `select * from pedidos_materiales
+          where obra_id = $1 and autor_id = usuario_actual() and actualizado_en > $2
+          order by pedido_en desc`,
+        [obraId, desde ?? '1970-01-01T00:00:00Z'],
+      );
+      return { hasta, pedidos };
+    });
   });
 }

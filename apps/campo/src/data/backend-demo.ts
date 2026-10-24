@@ -101,5 +101,10 @@ export function crearBackendDemo(): Backend {
         materiales: MATERIALES_DEMO,
       };
     },
+
+    // Sin servidor no hay quien cambie el estado: quedan los pedidos hechos en el teléfono.
+    async misPedidos() {
+      return { hasta: ACTUALIZADO, pedidos: [] };
+    },
   };
 }

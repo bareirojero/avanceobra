@@ -3,6 +3,7 @@
 import type {
   Anotacion,
   AnotacionCambio,
+  CambiarEstadoPedidosPedido,
   CambiarUsuarioPedido,
   ContenidoInforme,
   CrearUsuarioPedido,
@@ -25,6 +26,7 @@ import type {
   Obra,
   ObraPedido,
   PartePedido,
+  PedidoMaterial,
   PedidoMaterialDetalle,
   RegistroDia,
   RegistroDiaPedido,
@@ -93,6 +95,8 @@ export const api = {
   materiales: () => get<Material[]>("/materiales"),
   importarMateriales: (p: ImportarMaterialesPedido) => pedir<ImportacionMateriales>("POST", "/materiales/importar", p),
   pedidos: (obra: string) => get<PedidoMaterialDetalle[]>(`/obras/${obra}/pedidos`),
+  /** Solo editor. Devuelve los pedidos que cambiaron. */
+  cambiarEstadoPedidos: (obra: string, p: CambiarEstadoPedidosPedido) => pedir<PedidoMaterial[]>("PATCH", `/obras/${obra}/pedidos/estado`, p),
 
   sectores: (obra: string) => get<Sector[]>(`/obras/${obra}/sectores`),
   crearSector: (obra: string, s: SectorPedido) => pedir<Sector>("POST", `/obras/${obra}/sectores`, s),

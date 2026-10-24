@@ -1,6 +1,6 @@
 // Planillas de materiales: lectura del catálogo (Excel con código, descripción y unidad)
 // y armado del Excel de pedidos para editor y solo lectura.
-import type { FilaMaterial, PedidoMaterialDetalle } from "@registro-obra/contrato";
+import { type EstadoPedido, type FilaMaterial, NOMBRE_ESTADO_PEDIDO, type PedidoMaterialDetalle } from "@registro-obra/contrato";
 import writeXlsxFile, { type Cell, type SheetData } from "write-excel-file/browser";
 import type { Celda } from "./importar-items";
 
@@ -96,10 +96,66 @@ export async function descargarPedidos(pedidos: PedidoMaterialDetalle[], obra: s
       celda: (p) => (p.necesario_para ? { value: fechaCalendario(p.necesario_para), type: Date, format: "dd/mm/yyyy" } : { value: "", type: String }),
     },
     { titulo: "Fotos de referencia", ancho: 12, celda: (p) => ({ value: (p.fotos ?? []).length, type: Number }) },
+    { titulo: "Estado", ancho: 18, celda: (p) => ({ value: NOMBRE_ESTADO_PEDIDO[p.estado ?? "enviado"], type: String }) },
   ];
   const datos: SheetData = [columnas.map((c) => negrita(c.titulo)), ...pedidos.map((p) => columnas.map((c) => c.celda(p)))];
   const hoy = new Date().toLocaleDateString("en-CA", { timeZone: "America/Asuncion" });
   await writeXlsxFile(datos, { columns: columnas.map((c) => ({ width: c.ancho })), stickyRowsCount: 1, sheet: "Pedidos" }).toFile(
     `Pedidos de materiales - ${obra.replace(/[\\/:*?"<>|]/g, "")} - ${hoy}.xlsx`,
   );
+}
+
+// ---------------------------------------------------------------------------
+// Estados y filtros de la planilla de pedidos
+// ---------------------------------------------------------------------------
+
+/** Colores de cada estado (los mismos de packages/ui-tokens, pedidoState). */
+export const COLOR_ESTADO: Record<EstadoPedido, { bg: string; fg: string; dot: string }> = {
+  enviado: { bg: "#FFF4CC", fg: "#6B4F00", dot: "#FEC502" },
+  rechazado: { bg: "#FBE3E1", fg: "#8E1C13", dot: "#B42318" },
+  planificando: { bg: "#FFEAD5", fg: "#8A4500", dot: "#F28C28" },
+  en_compra: { bg: "#F9DCC8", fg: "#6E2A05", dot: "#C2410C" },
+  disponible: { bg: "#E1F5EA", fg: "#146A3D", dot: "#1B8A50" },
+};
+
+const diaParaguay = (instante: string) => new Date(instante).toLocaleDateString("en-CA", { timeZone: "America/Asuncion" });
+const dma = (f: string) => f.split("-").reverse().join("/");
+
+export type ColumnaPedido = "fecha" | "autor" | "material" | "cantidad" | "sector" | "para" | "estado";
+
+/** Lo que se ve en cada columna (y por lo que se filtra), y cómo se ordenan sus valores en el filtro. */
+export const COLUMNAS_PEDIDO: Record<ColumnaPedido, { valor: (p: PedidoMaterialDetalle) => string; orden?: (p: PedidoMaterialDetalle) => string | number }> = {
+  fecha: { valor: (p) => dma(diaParaguay(p.pedido_en)), orden: (p) => -new Date(p.pedido_en).getTime() },
+  autor: { valor: (p) => p.autor_nombre },
+  material: { valor: (p) => p.material_descripcion },
+  cantidad: { valor: (p) => `${Number(p.cantidad).toLocaleString("es-PY")} ${p.material_unidad ?? ""}`.trim(), orden: (p) => Number(p.cantidad) },
+  sector: { valor: (p) => (p.item_numero ? `${p.item_numero} · ${p.item_descripcion}` : p.item_descripcion) },
+  para: { valor: (p) => (p.necesario_para ? dma(p.necesario_para) : "Sin fecha"), orden: (p) => p.necesario_para ?? "9999" },
+  estado: { valor: (p) => NOMBRE_ESTADO_PEDIDO[p.estado ?? "enviado"], orden: (p) => ESTADOS_ORDEN.indexOf(p.estado ?? "enviado") },
+};
+const ESTADOS_ORDEN: EstadoPedido[] = ["enviado", "rechazado", "planificando", "en_compra", "disponible"];
+
+/** Por columna, los valores que se dejan ver. Sin la columna: todos. */
+export type FiltrosPedido = Partial<Record<ColumnaPedido, string[]>>;
+
+export function filtrarPedidos(pedidos: PedidoMaterialDetalle[], filtros: FiltrosPedido, salvo?: ColumnaPedido) {
+  const activos = (Object.entries(filtros) as [ColumnaPedido, string[]][]).filter(([c]) => c !== salvo);
+  if (!activos.length) return pedidos;
+  const conjuntos = activos.map(([c, v]) => [COLUMNAS_PEDIDO[c].valor, new Set(v)] as const);
+  return pedidos.filter((p) => conjuntos.every(([valor, vale]) => vale.has(valor(p))));
+}
+
+/** Valores distintos de una columna con cuántos pedidos tiene cada uno, en el orden de la columna. */
+export function valoresDeColumna(pedidos: PedidoMaterialDetalle[], columna: ColumnaPedido) {
+  const { valor, orden = valor } = COLUMNAS_PEDIDO[columna];
+  const cuenta = new Map<string, { n: number; orden: string | number }>();
+  for (const p of pedidos) {
+    const v = valor(p);
+    const c = cuenta.get(v);
+    if (c) c.n++;
+    else cuenta.set(v, { n: 1, orden: orden(p) });
+  }
+  return [...cuenta.entries()]
+    .sort(([a, x], [b, y]) => (typeof x.orden === "number" && typeof y.orden === "number" ? x.orden - y.orden : String(x.orden).localeCompare(String(y.orden), "es")) || a.localeCompare(b, "es"))
+    .map(([v, { n }]) => ({ valor: v, n }));
 }

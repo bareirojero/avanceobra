@@ -2,6 +2,7 @@ import type {
   ErrorApi,
   LoginPedido,
   LoginRespuesta,
+  MisPedidosRespuesta,
   OperacionPendiente,
   RenovarRespuesta,
   SubidaPedido,
@@ -191,6 +192,9 @@ export function crearBackendApi(base: string): Backend {
 
     novedades: (obraId, desde) =>
       pedir<SyncRespuesta>('GET', `/obras/${obraId}/sync${desde ? `?desde=${encodeURIComponent(desde)}` : ''}`),
+
+    misPedidos: (obraId, desde) =>
+      pedir<MisPedidosRespuesta>('GET', `/obras/${obraId}/mis-pedidos${desde ? `?desde=${encodeURIComponent(desde)}` : ''}`),
   };
 }
 
