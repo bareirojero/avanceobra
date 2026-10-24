@@ -2,7 +2,7 @@
 // Lecturas de la API para las pantallas, con caché y revalidación (SWR).
 import { useMemo } from "react";
 import useSWR from "swr";
-import type { CargoObra, DiaRespuesta, Informe, Item, Material, PedidoMaterialDetalle, RolObra, Sector, UsuarioConObras, Yo } from "@registro-obra/contrato";
+import type { CargoObra, DiaRespuesta, Informe, InformeConRevision, Item, Material, PedidoMaterialDetalle, RevisionInforme, RolObra, Sector, UsuarioConObras, Yo } from "@registro-obra/contrato";
 import { api, ErrorDeApi } from "./api";
 
 const opciones = { revalidateOnFocus: true, shouldRetryOnError: (e: unknown) => !(e instanceof ErrorDeApi && e.estado < 500) };
@@ -108,11 +108,17 @@ export function useInformes(obraId: string) {
 }
 
 export function useInforme(id: string | undefined) {
-  const { data, mutate } = useSWR<Informe>(id ? `/informes/${id}` : null, api.get, {
+  const { data, mutate } = useSWR<InformeConRevision>(id ? `/informes/${id}` : null, api.get, {
     ...opciones,
     refreshInterval: (d) => (d?.estado === "generando" ? 3000 : 0),
   });
   return { informe: data, mutate };
+}
+
+/** Revisiones publicadas del informe, la más nueva primero. */
+export function useRevisiones(id: string | undefined) {
+  const { data, mutate } = useSWR<RevisionInforme[]>(id ? `/informes/${id}/revisiones` : null, api.get, opciones);
+  return { revisiones: data ?? [], mutate };
 }
 
 /** URLs firmadas de lectura para rutas del almacenamiento (válidas 1 h; se renuevan a los 50 min). */

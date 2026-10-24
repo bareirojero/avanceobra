@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { ChevronRight, FileDown, FileText } from "lucide-react";
-import { numeroInforme } from "@registro-obra/contrato";
+import { codigoRevision, numeroInforme } from "@registro-obra/contrato";
 import { api, ErrorDeApi } from "@/lib/api";
 import { useInformes, useObra } from "@/lib/datos";
 import { fechaLarga, hoy } from "@/lib/formato";
@@ -63,7 +63,9 @@ export default function Informes() {
                 </span>
                 <div className="min-w-0 flex-1">
                   <div className="font-semibold first-letter:uppercase">{fechaLarga(i.fecha_desde)}</div>
-                  <div className="text-sm tabular-nums text-tenue">{numeroInforme(obra.sigla, i.numero)}</div>
+                  <div className="text-sm tabular-nums text-tenue">
+                    {i.estado === "publicado" && i.revision !== null ? codigoRevision(obra.sigla, i.numero, i.revision) : numeroInforme(obra.sigla, i.numero)}
+                  </div>
                 </div>
               </Link>
               {editor && i.automatico && <ChipAutomatico />}

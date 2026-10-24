@@ -216,7 +216,11 @@ export async function rutasCampo(app: FastifyInstance) {
             where exists (select 1 from fotos f where f.archivo_path = r or f.miniatura_path = r)`,
           [rutas],
         ),
-        q<{ ruta: string }>(`select pdf_path as ruta from informes where pdf_path = any($1)`, [rutas]),
+        q<{ ruta: string }>(
+          `select pdf_path as ruta from informes where pdf_path = any($1)
+           union select pdf_path from informe_revisiones where pdf_path = any($1)`,
+          [rutas],
+        ),
         q<{ ruta: string }>(
           `select distinct r as ruta from pedidos_materiales p, unnest(p.fotos) r where p.fotos && $1::text[] and r = any($1)`,
           [rutas],
