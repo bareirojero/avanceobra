@@ -120,6 +120,21 @@ test('login, permisos, fotos y sesiones', async () => {
   assert.deepEqual(Object.keys(ver.json.urls), [ruta]);
   assert.equal((await abrir(ver.json.urls[ruta])).status, 200);
 
+  // Envíos: mis fotos de todos los días, con URLs y marcas; nada de otros autores.
+  const mias = await pedir('GET', `/obras/${OBRA}/mis-fotos`, campo.acceso);
+  assert.equal(mias.estado, 200, JSON.stringify(mias.json));
+  assert.equal(mias.json.dias[0].fecha, hoy());
+  const mia = mias.json.dias[0].fotos.find((f: { id: string }) => f.id === fotoId);
+  assert.equal(mia.anotaciones.length, 1);
+  assert.equal(typeof mia.miniatura_url, 'string');
+  assert.equal((await abrir(mia.archivo_url)).status, 200);
+  assert.ok(mias.json.dias.every((d: { fotos: { autor_id: string }[] }) => d.fotos.every((f) => f.autor_id === yoCampo)));
+  const anteriores = await pedir('GET', `/obras/${OBRA}/mis-fotos?antes=${hoy()}`, campo.acceso);
+  assert.ok(!anteriores.json.dias.some((d: { fecha: string }) => d.fecha === hoy()));
+  const delEditor = await pedir('GET', `/obras/${OBRA}/mis-fotos?dias=31`, editor.acceso);
+  assert.ok(!delEditor.json.dias.some((d: { fotos: { id: string }[] }) => d.fotos.some((f) => f.id === fotoId)));
+  assert.equal((await pedir('GET', `/obras/${OBRA}/mis-fotos?dias=99`, campo.acceso)).estado, 422);
+
   // El lector no ve la carga cruda.
   const lector = await entrar('fiscal');
   assert.equal((await pedir('POST', '/archivos/ver', lector.acceso, { rutas: [ruta] })).json.urls[ruta], undefined);
