@@ -41,6 +41,7 @@ function Navegacion() {
         <Stack.Screen name="(pestanas)" />
         <Stack.Screen name="camara" options={{ animation: 'fade', contentStyle: { backgroundColor: '#000' } }} />
         <Stack.Screen name="foto/[id]" options={{ animation: 'fade', gestureEnabled: false }} />
+        <Stack.Screen name="foto-anterior" options={{ animation: 'fade' }} />
         <Stack.Screen name="pedido" options={{ animation: 'slide_from_bottom', gestureEnabled: false }} />
         <Stack.Screen name="obras" options={{ presentation: 'modal' }} />
         <Stack.Screen name="reingresar" options={{ presentation: 'modal' }} />

@@ -394,6 +394,24 @@ export interface SyncRespuesta {
   materiales: MaterialCampo[];
 }
 
+/**
+ * GET /api/obras/:obraId/mis-fotos?antes=<Fecha>&dias=<n>: las fotos propias (no borradas)
+ * de los `dias` días con fotos anteriores a `antes` (sin `antes`, desde hoy), del más nuevo
+ * al más viejo. Para la página siguiente se pasa antes = siguiente; null = no hay más.
+ */
+export interface MisFotosRespuesta {
+  dias: { fecha: Fecha; fotos: FotoConUrls[] }[];
+  siguiente: Fecha | null;
+}
+/** Foto con URLs firmadas de lectura (60 min) y sus marcas vigentes. */
+export interface FotoConUrls extends Foto {
+  archivo_url: string;
+  miniatura_url: string;
+  anotaciones: Anotacion[];
+}
+/** Días por página de mis-fotos (por defecto y máximo). */
+export const MIS_FOTOS_DIAS = { porDefecto: 7, maximo: 31 } as const;
+
 /** PUT /api/obras/:obraId/dia/:fecha/registro (solo editor) */
 export type RegistroDiaPedido = Pick<RegistroDia, 'clima' | 'hubo_lluvia' | 'personal' | 'observaciones'>;
 

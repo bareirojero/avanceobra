@@ -1,7 +1,8 @@
 import { Image } from 'expo-image';
+import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
-import { useCallback } from 'react';
-import { Camera, ChevronDown } from 'lucide-react-native';
+import { useCallback, useState } from 'react';
+import { Camera, ChevronDown, Upload } from 'lucide-react-native';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -9,11 +10,13 @@ import { Aviso } from '@/components/aviso';
 import { Boton, BotonPrincipal, Texto } from '@/components/base';
 import { ChipSync } from '@/components/chip-sync';
 import { SesionVencida } from '@/components/sesion-vencida';
-import { fotosDelDia, type FotoLocal } from '@/data/repositorio';
+import { procesarFoto } from '@/data/fotos-disco';
+import { fotosDelDia, nuevoId, type FotoLocal } from '@/data/repositorio';
 import { sincronizarPronto } from '@/data/sincronizacion';
 import { diaYFecha, horaCorta } from '@/domain/fechas';
 import { useApp, useSync } from '@/state/app';
 import { useDatos } from '@/state/datos';
+import { fotosNuevas } from '@/state/memoria';
 import { color, fuente, syncState } from '@/theme';
 
 const CARGOS: Record<string, string> = {
@@ -31,8 +34,34 @@ export default function Hoy() {
     [obra, sesion, fecha]),
   );
 
+  const [subiendo, setSubiendo] = useState(false);
+
   if (!sesion) return null;
   if (!obra) return <SinObras />;
+
+  /**
+   * Una imagen de la galería o de los archivos del teléfono sigue el mismo camino que una
+   * foto de la cámara: se comprime, se le ponen marcas y un ítem, y va al día de hoy.
+   */
+  async function subirArchivo() {
+    if (subiendo) return;
+    try {
+      const r = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 1 });
+      const elegida = r.canceled ? null : r.assets[0];
+      if (!elegida) return;
+      setSubiendo(true);
+      const id = nuevoId();
+      const procesada = await procesarFoto(elegida.uri, elegida.width, elegida.height, id);
+      // Sin GPS: la imagen pudo sacarse en otro lado.
+      fotosNuevas.poner({ id, tomadaEn: new Date().toISOString(), latitud: null, longitud: null, ...procesada });
+      router.push({ pathname: '/foto/[id]', params: { id, nueva: '1' } });
+    } catch (e) {
+      console.warn('Subir archivo', e);
+      Alert.alert('No se pudo abrir la imagen', 'Probá con otra. Si sigue pasando, avisale al editor.');
+    } finally {
+      setSubiendo(false);
+    }
+  }
 
   const fotos = datos ?? [];
 
@@ -97,7 +126,7 @@ export default function Hoy() {
             )}
           </View>
           {fotos.length === 0 ? (
-            <Texto style={{ color: color.inkSoft }}>Todavía no sacaste fotos hoy. Tocá “Sacar foto” para empezar.</Texto>
+            <Texto style={{ color: color.inkSoft }}>Todavía no sacaste fotos hoy. Tocá “Sacar foto” para empezar, o “Subir archivo” para cargar una imagen del teléfono.</Texto>
           ) : (
             <View style={s.grilla}>
               {fotos.map((f) => <Miniatura key={f.id} foto={f} />)}
@@ -107,7 +136,15 @@ export default function Hoy() {
       </ScrollView>
 
       <View style={s.acciones}>
-        <BotonPrincipal texto="Sacar foto" icono={Camera} style={{ flex: 1 }} onPress={() => router.push('/camara')} />
+        <Boton
+          texto={subiendo ? 'Preparando…' : 'Subir archivo'}
+          icono={Upload}
+          borde
+          disabled={subiendo}
+          onPress={subirArchivo}
+          style={s.subir}
+        />
+        <BotonPrincipal texto="Sacar foto" icono={Camera} onPress={() => router.push('/camara')} />
       </View>
     </SafeAreaView>
   );
@@ -161,5 +198,7 @@ const s = StyleSheet.create({
   miniatura: { width: '31.8%', height: 104, borderRadius: 12, overflow: 'hidden', backgroundColor: color.track },
   etiqueta: { position: 'absolute', left: 6, bottom: 6, height: 24, paddingHorizontal: 8, borderRadius: 12, justifyContent: 'center' },
   textoEtiqueta: { color: '#fff', fontFamily: fuente.bodySemi, fontSize: 12 },
-  acciones: { flexDirection: 'row', gap: 10, paddingHorizontal: 16, paddingBottom: 14, paddingTop: 6 },
+  acciones: { gap: 10, paddingHorizontal: 16, paddingBottom: 14, paddingTop: 6 },
+  // Secundario y discreto: gris, más bajo que "Sacar foto".
+  subir: { backgroundColor: color.track, borderColor: color.track, minHeight: 52 },
 });
