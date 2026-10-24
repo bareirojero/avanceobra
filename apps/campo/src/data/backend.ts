@@ -1,4 +1,4 @@
-import type { MisPedidosRespuesta, SyncRespuesta, Yo } from '@registro-obra/contrato';
+import type { MisFotosRespuesta, MisPedidosRespuesta, SyncRespuesta, Yo } from '@registro-obra/contrato';
 
 import type { Transporte } from '@/domain/cola';
 
@@ -27,6 +27,8 @@ export interface Backend {
   novedades(obraId: string, desde: string | null): Promise<SyncRespuesta>;
   /** GET /api/obras/:id/mis-pedidos: mis pedidos de materiales (todas las fechas) cambiados después de `desde`. */
   misPedidos(obraId: string, desde: string | null): Promise<MisPedidosRespuesta>;
+  /** GET /api/obras/:id/mis-fotos: mis fotos de días anteriores a `antes`, de a páginas de días. */
+  misFotos(obraId: string, antes: string): Promise<MisFotosRespuesta>;
 }
 
 /** Usuario o contraseña incorrectos (se muestra tal cual). */

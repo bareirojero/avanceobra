@@ -1,7 +1,15 @@
 // Lo que usa la app de campo: perfil, sincronización, subidas y archivos.
 // El panel usa los mismos endpoints para fotos subidas desde la web.
 
-import { DIAS_HISTORIA_EN_TELEFONO, type Yo } from '@registro-obra/contrato';
+import {
+  DIAS_HISTORIA_EN_TELEFONO,
+  MIS_FOTOS_DIAS,
+  type Anotacion,
+  type Foto,
+  type FotoConUrls,
+  type MisFotosRespuesta,
+  type Yo,
+} from '@registro-obra/contrato';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { urlLectura, urlSubida } from '../archivos.ts';
@@ -122,6 +130,57 @@ export async function rutasCampo(app: FastifyInstance) {
       ]);
       return { hasta, obra, miembros, sectores, items, partes, fotos, anotaciones, registros_dia, materiales };
     });
+  });
+
+  // Envíos de días anteriores: las fotos propias de todos los días, de a páginas de días.
+  app.get('/obras/:obraId/mis-fotos', async (pedido): Promise<MisFotosRespuesta> => {
+    const { obraId } = z.object({ obraId: uuid }).parse(pedido.params);
+    const { antes, dias } = z
+      .object({
+        antes: fecha.optional(),
+        dias: z.coerce.number().int().min(1).max(MIS_FOTOS_DIAS.maximo).default(MIS_FOTOS_DIAS.porDefecto),
+      })
+      .parse(pedido.query);
+    const { fotos, anotaciones, siguiente } = await conUsuario(pedido.sesion.usuarioId, async (q) => {
+      const [obra] = await q(`select id from obras where id = $1`, [obraId]);
+      if (!obra) throw noEncontrado('Obra');
+      // Un día más de los pedidos para saber si hay otra página.
+      const fechas = (
+        await q<{ fecha: string }>(
+          `select distinct p.fecha from partes_diarios p join fotos f on f.parte_id = p.id
+            where p.obra_id = $1 and p.autor_id = usuario_actual() and f.eliminado_en is null
+              and p.fecha < coalesce($2::date, hoy_py() + 1)
+            order by p.fecha desc limit $3`,
+          [obraId, antes ?? null, dias + 1],
+        )
+      ).map((f) => f.fecha);
+      const pagina = fechas.slice(0, dias);
+      const fotos = await q<Foto & { fecha: string }>(
+        `select f.*, p.fecha from fotos f join partes_diarios p on p.id = f.parte_id
+          where p.obra_id = $1 and p.autor_id = usuario_actual() and f.eliminado_en is null and p.fecha = any($2::date[])
+          order by p.fecha desc, f.tomada_en desc`,
+        [obraId, pagina],
+      );
+      const anotaciones = await q<Anotacion>(
+        `select * from anotaciones where foto_id = any($1) and eliminado_en is null order by foto_id, numero`,
+        [fotos.map((f) => f.id)],
+      );
+      return { fotos, anotaciones, siguiente: fechas.length > dias ? pagina[pagina.length - 1] : null };
+    });
+
+    const porDia = new Map<string, FotoConUrls[]>();
+    for (const { fecha: dia, ...f } of fotos) {
+      const [archivo, miniatura] = await Promise.all([urlLectura(f.archivo_path), urlLectura(f.miniatura_path)]);
+      const lista = porDia.get(dia) ?? [];
+      lista.push({
+        ...f,
+        archivo_url: archivo.url,
+        miniatura_url: miniatura.url,
+        anotaciones: anotaciones.filter((a) => a.foto_id === f.id),
+      });
+      porDia.set(dia, lista);
+    }
+    return { dias: [...porDia].map(([fecha, fotos]) => ({ fecha, fotos })), siguiente };
   });
 
   app.put('/partes/:id', async (pedido) => {

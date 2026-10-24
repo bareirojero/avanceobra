@@ -116,16 +116,15 @@ export interface FotoLocal extends Foto {
   error: string | null;
 }
 
-const SELECT_FOTO = `
-  SELECT f.*,
+export const COLUMNAS_FOTO = `f.*,
     (SELECT COUNT(*) FROM anotaciones a WHERE a.foto_id = f.id AND a.eliminado_en IS NULL) AS marcas,
     (SELECT c.error FROM cola_salida c WHERE c.grupos LIKE '%"' || f.id || '"%' AND c.error IS NOT NULL LIMIT 1) AS error,
-    EXISTS (SELECT 1 FROM cola_salida c WHERE c.grupos LIKE '%"' || f.id || '"%') AS en_cola
-  FROM fotos f`;
+    EXISTS (SELECT 1 FROM cola_salida c WHERE c.grupos LIKE '%"' || f.id || '"%') AS en_cola`;
+const SELECT_FOTO = `SELECT ${COLUMNAS_FOTO} FROM fotos f`;
 
-type FilaFoto = Omit<FotoLocal, 'estado'> & { en_cola: number };
+export type FilaFoto = Omit<FotoLocal, 'estado'> & { en_cola: number };
 
-const fotoDeFila = ({ en_cola, ...f }: FilaFoto): FotoLocal => ({
+export const fotoDeFila = ({ en_cola, ...f }: FilaFoto): FotoLocal => ({
   ...f,
   estado: f.error ? 'error' : en_cola ? 'pendiente' : 'subida',
 });

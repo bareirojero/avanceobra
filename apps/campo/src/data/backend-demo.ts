@@ -106,5 +106,11 @@ export function crearBackendDemo(): Backend {
     async misPedidos() {
       return { hasta: ACTUALIZADO, pedidos: [] };
     },
+
+    // Sin servidor no hay más fotos que las del teléfono.
+    async misFotos() {
+      if (!(await hayRed())) throw new ErrorSinConexion();
+      return { dias: [], siguiente: null };
+    },
   };
 }

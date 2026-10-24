@@ -2,6 +2,7 @@ import type {
   ErrorApi,
   LoginPedido,
   LoginRespuesta,
+  MisFotosRespuesta,
   MisPedidosRespuesta,
   OperacionPendiente,
   RenovarRespuesta,
@@ -195,6 +196,8 @@ export function crearBackendApi(base: string): Backend {
 
     misPedidos: (obraId, desde) =>
       pedir<MisPedidosRespuesta>('GET', `/obras/${obraId}/mis-pedidos${desde ? `?desde=${encodeURIComponent(desde)}` : ''}`),
+
+    misFotos: (obraId, antes) => pedir<MisFotosRespuesta>('GET', `/obras/${obraId}/mis-fotos?antes=${antes}`),
   };
 }
 

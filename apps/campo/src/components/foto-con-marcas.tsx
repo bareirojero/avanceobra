@@ -25,6 +25,8 @@ import { acento, color, fuente, marca as tokensMarca } from '@/theme';
 
 interface Props {
   uri: string;
+  /** Clave de caché de una imagen remota (la URL firmada cambia en cada pedido). */
+  claveCache?: string | null;
   foto: Tam;
   marcas: Marca[];
   activaId?: string | null;
@@ -44,6 +46,7 @@ interface Props {
  */
 export function FotoConMarcas({
   uri,
+  claveCache,
   foto,
   marcas,
   activaId,
@@ -125,7 +128,7 @@ export function FotoConMarcas({
   return (
     <View style={[s.contenedor, style]} onLayout={alMedir}>
       <Image
-        source={{ uri }}
+        source={{ uri, cacheKey: claveCache ?? undefined }}
         style={{ position: 'absolute', left: rect.x, top: rect.y, width: rect.ancho, height: rect.alto }}
         contentFit="fill"
         accessibilityIgnoresInvertColors
