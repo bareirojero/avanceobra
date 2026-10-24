@@ -22,7 +22,7 @@ export interface Almacen {
   guardarBorrador(informe_id: string, contenido: ContenidoInforme, modelo: string | null): Promise<void>; // contenido_ia y contenido, estado borrador
   guardarError(informe_id: string, mensaje: string): Promise<void>;
   guardarContenido(informe_id: string, contenido: ContenidoInforme): Promise<void>; // solo contenido
-  guardarPdf(informe_id: string, pdf: Buffer): Promise<string>; // devuelve la ruta
+  guardarPdf(informe_id: string, pdf: Buffer): Promise<string>; // vista previa del borrador; devuelve la ruta
 }
 
 /** Con clave de la API de Claude en el entorno, redacta la IA; sin clave, se arma sin IA (costo cero). */
@@ -54,16 +54,26 @@ export async function regenerar(almacen: Almacen, informe_id: string, avance_id:
   return nuevo;
 }
 
-/** PDF desde el contenido revisado. Solo PDF (Rp 9). */
+/** PDF del borrador con los datos de ahora (vista previa del editor). Solo PDF (Rp 9). */
 export async function exportar(almacen: Almacen, informe_id: string) {
   const inf = await almacen.informe(informe_id);
   if (!inf.contenido) throw new Error("El informe todavía no tiene contenido.");
   const datos = await almacen.datosDelDia(inf.obra_id, inf.fecha);
-  const ref = await armarReferencias(inf.contenido, datos, almacen.leerFoto, {
-    numero: inf.numero,
-    revisadoPor: inf.revisado_por ?? undefined,
-  });
-  return almacen.guardarPdf(informe_id, await informePdf(inf.contenido, ref));
+  const pdf = await armarPdf(almacen.leerFoto, inf.contenido, datos, { numero: inf.numero, revisadoPor: inf.revisado_por ?? undefined });
+  return almacen.guardarPdf(informe_id, pdf);
+}
+
+/**
+ * PDF con los datos que se le pasan. Para una revisión publicada son los congelados
+ * al publicarla, así el PDF no cambia con lo que pase después en la base.
+ */
+export async function armarPdf(
+  leerFoto: LeerFoto,
+  contenido: ContenidoInforme,
+  datos: DatosDelDia,
+  opciones: { numero: string; revisadoPor?: string },
+) {
+  return informePdf(contenido, await armarReferencias(contenido, datos, leerFoto, opciones));
 }
 
 export { armarInforme } from "./armar.ts";

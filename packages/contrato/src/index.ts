@@ -203,6 +203,38 @@ export interface Informe extends Sincronizable {
   generado_por: Uuid | null;
   publicado_por: Uuid | null;
   publicado_en: Instante | null;
+  revision: number | null; // revisión vigente (la última publicada); null si nunca se publicó
+}
+
+/**
+ * Versión publicada e inmutable de un informe. Su PDF se arma con los datos del día
+ * congelados al publicar: lo que cambie después en la base no lo toca.
+ */
+export interface RevisionInforme {
+  id: Uuid;
+  informe_id: Uuid;
+  obra_id: Uuid;
+  revision: number; // 0, 1, 2...
+  codigo: string; // "ODD-001-007-R1"
+  publicado_por: Uuid | null;
+  publicado_en: Instante;
+  tiene_pdf: boolean;
+}
+
+/** Datos del día congelados en la revisión vigente (filas como estaban al publicar). */
+export interface DatosCongelados {
+  obra: Pick<Obra, 'id' | 'codigo' | 'nombre'> & { ubicacion: string | null };
+  fecha: Fecha;
+  usuarios: { id: Uuid; nombre: string; cargo: string | null }[];
+  sectores: Sector[];
+  items: Item[];
+  fotos: Foto[];
+  anotaciones: Anotacion[];
+}
+
+/** GET /informes/:id: con la revisión vigente y, si está publicado, sus datos congelados. */
+export interface InformeConRevision extends Informe {
+  revision_vigente: (RevisionInforme & { datos: DatosCongelados | null }) | null;
 }
 
 /** Material del catálogo de la organización (se importa desde Excel). */
@@ -308,10 +340,18 @@ export const rutaFoto = (obra: Uuid, autor: Uuid, foto: Uuid) => `fotos/${obra}/
 export const rutaMiniatura = (obra: Uuid, autor: Uuid, foto: Uuid) => `fotos/${obra}/${autor}/${foto}_mini.jpg`;
 export const rutaFotoPedido = (obra: Uuid, autor: Uuid, foto: Uuid) => `pedidos/${obra}/${autor}/${foto}.jpg`;
 export const rutaInforme = (obra: Uuid, informe: Uuid) => `informes/${obra}/${informe}.pdf`;
+/** PDF congelado de una revisión publicada. */
+export const rutaRevision = (obra: Uuid, informe: Uuid, revision: number) => `informes/${obra}/${informe}-r${revision}.pdf`;
+/** Vista previa del borrador: se rehace cada vez, nunca pisa un PDF publicado. */
+export const rutaBorradorInforme = (obra: Uuid, informe: Uuid) => `informes/${obra}/${informe}-borrador.pdf`;
 
 /** Número visible del informe, ej. "ODD-001-007" (obras.sigla + correlativo de la base). */
 export const numeroInforme = (sigla: string | null, numero: number) =>
   `${sigla ?? 'INF'}-001-${String(numero).padStart(3, '0')}`;
+
+/** Código de una revisión publicada, ej. "ODD-001-007-R1". La primera es R0. */
+export const codigoRevision = (sigla: string | null, numero: number, revision: number) =>
+  `${numeroInforme(sigla, numero)}-R${revision}`;
 
 // -----------------------------------------------------------------------------
 // Sincronización offline

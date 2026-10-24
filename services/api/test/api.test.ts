@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { after, before, test } from 'node:test';
+import pg from 'pg';
 import { prepararAlmacen } from '../src/archivos.ts';
 import { pool } from '../src/db.ts';
 import { crearServidor } from '../src/servidor.ts';
@@ -50,6 +51,8 @@ async function abrir(url: string, init: { method?: string; headers?: Record<stri
   if (r.statusCode === 302) return abrir(r.headers.location as string);
   return { status: r.statusCode, texto: async () => r.body };
 }
+
+type Fila = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
 
 const hoy = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/Asuncion' });
 
@@ -309,7 +312,67 @@ test('informe del día: generar, publicar y PDF', async () => {
     assert.equal(pdf.estado, 302);
     assert.match(await (await abrir(pdf.r.headers.location as string)).texto(), /^%PDF/);
   }
+
+  // Publicar congela: Rev. 0 con los datos del día tal como estaban.
+  const r0 = (await pedir('GET', `/informes/${id}`, editor.acceso)).json;
+  assert.equal(r0.revision, 0);
+  assert.match(r0.revision_vigente.codigo, /-R0$/);
+  const congelada = r0.revision_vigente.datos.fotos.find((f: Fila) => f.id === fotoId);
+  assert.equal(congelada.comentario, 'Hormigonado de zapata en el eje 3');
+  // Publicar otra vez sin editar no crea revisión nueva.
+  assert.equal((await pedir('POST', `/informes/${id}/publicar`, editor.acceso)).json.revision, 0);
+
+  // Lo que cambie después en la base no toca lo publicado.
+  const cambio = await pedir('PATCH', `/fotos/${fotoId}`, editor.acceso, { comentario: 'Comentario corregido después' });
+  assert.equal(cambio.estado, 200, JSON.stringify(cambio.json));
+  const igual = (await pedir('GET', `/informes/${id}`, lector.acceso)).json;
+  assert.equal(igual.revision_vigente.datos.fotos.find((f: Fila) => f.id === fotoId).comentario, 'Hormigonado de zapata en el eje 3');
+  const pdfAntes = r0.pdf_path ?? (await esperarPdf(id, editor.acceso));
+
+  // Editar de nuevo y publicar crea la Rev. 1 con los datos de ahora; la Rev. 0 queda igual.
+  const editado = await pedir('PATCH', `/informes/${id}`, editor.acceso, { contenido: { ...r0.contenido, resumen: 'Resumen corregido' } });
+  assert.equal(editado.json.estado, 'borrador');
+  const r1 = await pedir('POST', `/informes/${id}/publicar`, editor.acceso);
+  assert.equal(r1.json.revision, 1);
+  const vigente = (await pedir('GET', `/informes/${id}`, editor.acceso)).json.revision_vigente;
+  assert.match(vigente.codigo, /-R1$/);
+  assert.equal(vigente.datos.fotos.find((f: Fila) => f.id === fotoId).comentario, 'Comentario corregido después');
+  const revisiones = (await pedir('GET', `/informes/${id}/revisiones`, lector.acceso)).json;
+  assert.deepEqual(revisiones.map((r: Fila) => r.revision), [1, 0]);
+  await esperarPdf(id, editor.acceso);
+  if (process.env.CHROMIUM_PATH) {
+    const viejo = await pedir('GET', `/informes/${id}/pdf?revision=0`, lector.acceso);
+    assert.equal(viejo.estado, 302);
+    assert.match(await (await abrir(viejo.r.headers.location as string)).texto(), /^%PDF/);
+  }
+
+  if (process.env.DATABASE_ADMIN_URL) {
+    const dueño = new pg.Client({ connectionString: process.env.DATABASE_ADMIN_URL });
+    await dueño.connect();
+    try {
+      const [rev0] = (await dueño.query(`select contenido, datos, pdf_path from informe_revisiones where informe_id = $1 and revision = 0`, [id])).rows;
+      assert.notEqual(rev0.contenido.resumen, 'Resumen corregido');
+      assert.equal(rev0.datos.fotos.find((f: Fila) => f.id === fotoId).comentario, 'Hormigonado de zapata en el eje 3');
+      if (pdfAntes) assert.equal(rev0.pdf_path, pdfAntes);
+      // Una revisión publicada no se modifica ni se borra, ni a mano en la base.
+      await assert.rejects(dueño.query(`update informe_revisiones set contenido = '{}'::jsonb where informe_id = $1`, [id]), /no se modifica/);
+      await assert.rejects(dueño.query(`delete from informe_revisiones where informe_id = $1`, [id]), /no se borra/);
+    } finally {
+      await dueño.end();
+    }
+  }
 });
+
+// El PDF de la revisión se arma en segundo plano al publicar.
+async function esperarPdf(id: string, token: string) {
+  if (!process.env.CHROMIUM_PATH) return null;
+  for (let i = 0; i < 100; i++) {
+    const r = (await pedir('GET', `/informes/${id}`, token)).json;
+    if (r.pdf_path) return r.pdf_path as string;
+    await new Promise((res) => setTimeout(res, 200));
+  }
+  throw new Error('El PDF de la revisión no se armó');
+}
 
 test('informe automático de las 23:55 para los días sin informe', { skip: !process.env.TAREAS_SECRETO }, async () => {
   const editor = await entrar('editor');

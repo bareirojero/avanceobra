@@ -2,10 +2,10 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, Check, FileDown, FileText, Loader2, Plus, RefreshCw, RotateCcw, X } from "lucide-react";
-import { numeroInforme, type Alerta, type ContenidoInforme, type PersonalEnObra } from "@registro-obra/contrato";
+import { ArrowLeft, Check, FileDown, FileText, Loader2, Lock, Plus, RefreshCw, RotateCcw, X } from "lucide-react";
+import { numeroInforme, type Alerta, type ContenidoInforme, type PersonalEnObra, type RevisionInforme } from "@registro-obra/contrato";
 import { api } from "@/lib/api";
-import { useDia, useEquipo, useInforme, useItems, useObra, useSectores, useUrls } from "@/lib/datos";
+import { useDia, useEquipo, useInforme, useItems, useObra, useRevisiones, useSectores, useUrls } from "@/lib/datos";
 import { fechaNumerica, hora } from "@/lib/formato";
 import { ChipAutomatico, ChipEstado, Vacio } from "@/components/ui";
 import { DocumentoInforme, type Seleccion } from "@/components/documento-informe";
@@ -28,8 +28,15 @@ export default function InformeDelDia() {
   const { informe, mutate } = useInforme(dia.informe?.id);
   const { items } = useItems(id);
   const { sectores } = useSectores(id);
-  const { nombre } = useEquipo(id);
-  const urls = useUrls(dia.fotos.map((f) => f.archivo_path));
+  const { nombre: nombreEquipo } = useEquipo(id);
+  const { revisiones, mutate: mutateRevisiones } = useRevisiones(informe?.revision !== null ? informe?.id : undefined);
+  // Publicado, el informe se muestra con los datos congelados de su revisión, no con los de ahora.
+  const congelado = informe?.estado === "publicado" ? (informe.revision_vigente?.datos ?? null) : null;
+  const fotosDoc = congelado?.fotos ?? dia.fotos;
+  const anotacionesDoc = congelado?.anotaciones ?? dia.anotaciones;
+  const itemsDoc = congelado?.items ?? items;
+  const nombre = (u: string) => congelado?.usuarios.find((x) => x.id === u)?.nombre ?? nombreEquipo(u);
+  const urls = useUrls(fotosDoc.map((f) => f.archivo_path));
   const minis = useUrls(dia.fotos.map((f) => f.miniatura_path));
   const [seleccion, setSeleccion] = useState<Seleccion>(null);
   const [visor, setVisor] = useState<number | null>(null);
@@ -54,7 +61,8 @@ export default function InformeDelDia() {
     ultimo.current = null;
     setGuardado("guardando");
     try {
-      await mutate(await api.guardarInforme(informe.id, c), { revalidate: false });
+      const r = await api.guardarInforme(informe.id, c);
+      await mutate((p) => (p ? { ...p, ...r } : p), { revalidate: false });
       setGuardado(ultimo.current ? "pendiente" : "guardado");
     } catch (e) {
       ultimo.current ??= c;
@@ -145,15 +153,21 @@ export default function InformeDelDia() {
   }
 
   const publicado = informe.estado === "publicado";
-  const numero = numeroInforme(obra.sigla, informe.numero);
-  const datos = { obra, numero, fecha, contenido: borrador, fotos: dia.fotos, anotaciones: dia.anotaciones, items, sectores, nombre, urls };
+  const vigente = publicado ? informe.revision_vigente : null;
+  const numero = vigente?.codigo ?? numeroInforme(obra.sigla, informe.numero);
+  const proxima = informe.revision === null ? 0 : informe.revision + 1;
+  const obraDoc = congelado ? { ...obra, codigo: congelado.obra.codigo, nombre: congelado.obra.nombre } : obra;
+  const datos = {
+    obra: obraDoc, numero, fecha, contenido: borrador, fotos: fotosDoc, anotaciones: anotacionesDoc, items: itemsDoc,
+    sectores: congelado?.sectores ?? sectores, nombre, urls,
+  };
   // Fotos del informe en el orden en que aparecen, para el visor.
   const fotosInforme = borrador.avances.flatMap((a) =>
     a.fotos.flatMap((fi) => {
-      const foto = dia.fotos.find((f) => f.id === fi.foto_id);
-      const it = items.find((i) => i.id === a.item_id);
+      const foto = fotosDoc.find((f) => f.id === fi.foto_id);
+      const it = itemsDoc.find((i) => i.id === a.item_id);
       return foto
-        ? [{ foto, src: urls[foto.archivo_path], anotaciones: dia.anotaciones.filter((x) => x.foto_id === foto.id), autor: nombre(foto.autor_id), detalle: it?.numero ? `${it.numero} · ${a.titulo}` : a.titulo }]
+        ? [{ foto, src: urls[foto.archivo_path], anotaciones: anotacionesDoc.filter((x) => x.foto_id === foto.id), autor: nombre(foto.autor_id), detalle: it?.numero ? `${it.numero} · ${a.titulo}` : a.titulo }]
         : [];
     }),
   );
@@ -185,16 +199,33 @@ export default function InformeDelDia() {
             title={guardado !== "guardado" ? "Esperá a que se guarden los cambios" : undefined}
             className={`boton-secundario h-10 ${guardado !== "guardado" ? "pointer-events-none opacity-50" : ""}`}
           >
-            <FileDown size={16} /> Descargar PDF
+            <FileDown size={16} /> {publicado ? "Descargar PDF" : "Vista previa PDF"}
           </a>
           {editor &&
             (publicado ? (
-              <button className="boton-secundario h-10" disabled={ocupado} onClick={() => hacer(async () => mutate(await api.guardarInforme(informe.id, borrador), { revalidate: false }))}>
-                <RotateCcw size={16} /> Volver a borrador
+              <button
+                className="boton-secundario h-10"
+                disabled={ocupado}
+                onClick={() => {
+                  if (!confirm(`La ${numero} queda guardada tal como está. Al publicar de nuevo se crea la Rev. ${proxima}. ¿Seguimos?`)) return;
+                  hacer(async () => {
+                    await api.guardarInforme(informe.id, borrador);
+                    await mutate();
+                  });
+                }}
+              >
+                <RotateCcw size={16} /> Editar de nuevo
               </button>
             ) : (
-              <button className="boton-principal h-10" disabled={ocupado} onClick={() => hacer(async () => mutate(await api.publicarInforme(informe.id), { revalidate: false }))}>
-                <Check size={18} /> Aprobar y publicar
+              <button
+                className="boton-principal h-10"
+                disabled={ocupado}
+                onClick={() => hacer(async () => {
+                  await api.publicarInforme(informe.id);
+                  await Promise.all([mutate(), mutateRevisiones()]);
+                })}
+              >
+                <Check size={18} /> {informe.revision === null ? "Aprobar y publicar" : `Publicar Rev. ${proxima}`}
               </button>
             ))}
         </div>
@@ -217,11 +248,18 @@ export default function InformeDelDia() {
         {editor && (
           <aside className="flex min-w-0 flex-[1_1_320px] flex-col gap-4 lg:sticky lg:top-24">
             {publicado ? (
-              <p className="tarjeta p-5 text-sm text-tenue">
-                Publicado{informe.publicado_por ? ` por ${nombre(informe.publicado_por)}` : ""}
-                {informe.publicado_en && ` el ${fechaNumerica(informe.publicado_en)} a las ${hora(informe.publicado_en)}`}. Lo ven los usuarios de solo
-                lectura. Para corregirlo, volvelo a borrador.
-              </p>
+              <>
+                <p className="tarjeta flex gap-3 p-5 text-sm text-tenue">
+                  <Lock size={18} className="mt-0.5 shrink-0 text-tinta" />
+                  <span>
+                    <b className="text-tinta">{numero}</b> publicada{informe.publicado_por ? ` por ${nombre(informe.publicado_por)}` : ""}
+                    {informe.publicado_en && ` el ${fechaNumerica(informe.publicado_en)} a las ${hora(informe.publicado_en)}`}. Lo ven los usuarios de solo
+                    lectura. Quedó congelada: si después se corrigen o borran fotos, este informe y su PDF no cambian. Para corregirlo, tocá
+                    «Editar de nuevo» y publicalo como Rev. {proxima}.
+                  </span>
+                </p>
+                <Revisiones informeId={informe.id} revisiones={revisiones} nombre={nombre} />
+              </>
             ) : (
               <>
                 <ClimaYPersonal
@@ -280,6 +318,13 @@ export default function InformeDelDia() {
                   )}
                 </section>
 
+                {revisiones.length > 0 && (
+                  <p className="tarjeta p-5 text-sm text-tenue">
+                    Estás editando sobre la {revisiones[0].codigo}, que sigue guardada. Al publicar queda como Rev. {proxima}.
+                  </p>
+                )}
+                <Revisiones informeId={informe.id} revisiones={revisiones} nombre={nombre} />
+
                 <button
                   className="flex items-center gap-1.5 self-start text-sm font-semibold text-tenue hover:text-tinta"
                   disabled={ocupado}
@@ -300,6 +345,32 @@ export default function InformeDelDia() {
         )}
       </div>
     </div>
+  );
+}
+
+/** Versiones publicadas: cada una con su código y su PDF congelado. */
+function Revisiones({ informeId, revisiones, nombre }: { informeId: string; revisiones: RevisionInforme[]; nombre: (id: string) => string }) {
+  if (!revisiones.length) return null;
+  return (
+    <section className="tarjeta flex flex-col gap-3 p-5">
+      <h2 className="titulo text-lg font-bold">Revisiones</h2>
+      <ul className="flex flex-col divide-y divide-borde text-sm">
+        {revisiones.map((r) => (
+          <li key={r.id} className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
+            <span className="min-w-0 flex-1">
+              <span className="block font-semibold tabular-nums">{r.codigo}</span>
+              <span className="text-tenue">
+                {fechaNumerica(r.publicado_en)} {hora(r.publicado_en)}
+                {r.publicado_por ? ` · ${nombre(r.publicado_por)}` : ""}
+              </span>
+            </span>
+            <a href={api.urlPdf(informeId, r.revision)} target="_blank" rel="noopener" className="boton-secundario h-9 shrink-0 text-sm">
+              <FileDown size={16} /> PDF
+            </a>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 

@@ -18,11 +18,13 @@ import type {
   ImportarItemsPedido,
   ImportarMaterialesPedido,
   Informe,
+  InformeConRevision,
   Item,
   LoginRespuesta,
   Material,
   MiembroPedido,
   Obra,
+  RevisionInforme,
   ObraPedido,
   PartePedido,
   PedidoMaterialDetalle,
@@ -119,10 +121,11 @@ export const api = {
   cambiarAnotacion: (id: string, c: AnotacionCambio) => pedir<Anotacion>("PATCH", `/anotaciones/${id}`, c),
 
   informes: (obra: string) => get<Informe[]>(`/obras/${obra}/informes`),
-  informe: (id: string) => get<Informe>(`/informes/${id}`),
+  informe: (id: string) => get<InformeConRevision>(`/informes/${id}`),
+  revisiones: (id: string) => get<RevisionInforme[]>(`/informes/${id}/revisiones`),
   generarInforme: (p: GenerarInformePedido) => pedir<GenerarInformeRespuesta>("POST", "/informes/generar", p),
   guardarInforme: (id: string, contenido: ContenidoInforme) => pedir<Informe>("PATCH", `/informes/${id}`, { contenido }),
   publicarInforme: (id: string) => pedir<Informe>("POST", `/informes/${id}/publicar`),
-  /** Redirige a la URL firmada del PDF (lo genera si falta). */
-  urlPdf: (id: string) => `/api/informes/${id}/pdf`,
+  /** Redirige a la URL firmada del PDF: el congelado de la revisión vigente (o de la indicada); si es borrador, una vista previa. */
+  urlPdf: (id: string, revision?: number) => `/api/informes/${id}/pdf${revision === undefined ? "" : `?revision=${revision}`}`,
 };
