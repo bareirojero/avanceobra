@@ -123,6 +123,21 @@ test('login, permisos, fotos y sesiones', async () => {
   assert.deepEqual(Object.keys(ver.json.urls), [ruta]);
   assert.equal((await abrir(ver.json.urls[ruta])).status, 200);
 
+  // Envíos: mis fotos de todos los días, con URLs y marcas; nada de otros autores.
+  const mias = await pedir('GET', `/obras/${OBRA}/mis-fotos`, campo.acceso);
+  assert.equal(mias.estado, 200, JSON.stringify(mias.json));
+  assert.equal(mias.json.dias[0].fecha, hoy());
+  const mia = mias.json.dias[0].fotos.find((f: { id: string }) => f.id === fotoId);
+  assert.equal(mia.anotaciones.length, 1);
+  assert.equal(typeof mia.miniatura_url, 'string');
+  assert.equal((await abrir(mia.archivo_url)).status, 200);
+  assert.ok(mias.json.dias.every((d: { fotos: { autor_id: string }[] }) => d.fotos.every((f) => f.autor_id === yoCampo)));
+  const anteriores = await pedir('GET', `/obras/${OBRA}/mis-fotos?antes=${hoy()}`, campo.acceso);
+  assert.ok(!anteriores.json.dias.some((d: { fecha: string }) => d.fecha === hoy()));
+  const delEditor = await pedir('GET', `/obras/${OBRA}/mis-fotos?dias=31`, editor.acceso);
+  assert.ok(!delEditor.json.dias.some((d: { fotos: { id: string }[] }) => d.fotos.some((f) => f.id === fotoId)));
+  assert.equal((await pedir('GET', `/obras/${OBRA}/mis-fotos?dias=99`, campo.acceso)).estado, 422);
+
   // El lector no ve la carga cruda.
   const lector = await entrar('fiscal');
   assert.equal((await pedir('POST', '/archivos/ver', lector.acceso, { rutas: [ruta] })).json.urls[ruta], undefined);
@@ -157,6 +172,33 @@ test('login, permisos, fotos y sesiones', async () => {
   const diaEditor = await pedir('GET', `/obras/${OBRA}/dia/${hoy()}`, editor.acceso);
   assert.ok(diaEditor.json.fotos.some((f: { id: string; eliminado_en: string | null }) => f.id === fotoId && f.eliminado_en));
   assert.equal((await pedir('PATCH', `/fotos/${fotoId}`, editor.acceso, { eliminada: false })).json.eliminado_en, null);
+
+  // Historial de obra: fotos vigentes de varios días, filtradas por ítem, persona y fechas.
+  const desde = new Date(Date.now() - 90 * 864e5).toLocaleDateString('en-CA', { timeZone: 'America/Asuncion' });
+  const deItem = await pedir('GET', `/obras/${OBRA}/historial?desde=${desde}&hasta=${hoy()}&item=${item.id}`, editor.acceso);
+  assert.equal(deItem.estado, 200, JSON.stringify(deItem.json));
+  const enHistorial = deItem.json.fotos.find((f: { id: string }) => f.id === fotoId);
+  assert.equal(enHistorial?.fecha, hoy());
+  assert.ok(deItem.json.fotos.every((f: { item_id: string }) => f.item_id === item.id));
+  assert.ok(deItem.json.anotaciones.some((a: { id: string }) => a.id === anot.json.id));
+  assert.equal(deItem.json.registros.find((r: { fecha: string }) => r.fecha === hoy())?.clima, 'Soleado, 31 °C');
+  assert.equal(deItem.json.truncado, false);
+  // El título que agrupa al ítem trae también sus fotos; otro ítem, no.
+  if (item.padre_id) {
+    const deTitulo = await pedir('GET', `/obras/${OBRA}/historial?desde=${desde}&hasta=${hoy()}&item=${item.padre_id}`, editor.acceso);
+    assert.ok(deTitulo.json.fotos.some((f: { id: string }) => f.id === fotoId));
+  }
+  const otro = sync.json.items.find((i: { id: string; es_titulo: boolean }) => !i.es_titulo && i.id !== item.id);
+  const deOtro = await pedir('GET', `/obras/${OBRA}/historial?desde=${desde}&hasta=${hoy()}&item=${otro.id}`, editor.acceso);
+  assert.ok(!deOtro.json.fotos.some((f: { id: string }) => f.id === fotoId));
+  const deNadie = await pedir('GET', `/obras/${OBRA}/historial?desde=${desde}&hasta=${hoy()}&persona=${editor.yo.usuario.id}`, editor.acceso);
+  assert.ok(!deNadie.json.fotos.some((f: { id: string }) => f.id === fotoId));
+  const antes = await pedir('GET', `/obras/${OBRA}/historial?desde=2020-01-01&hasta=2020-01-31`, editor.acceso);
+  assert.deepEqual(antes.json.fotos, []);
+  assert.equal((await pedir('GET', `/obras/${OBRA}/historial?desde=${hoy()}&hasta=2020-01-01`, editor.acceso)).estado, 422);
+  // El lector solo ve lo que salió en informes publicados.
+  const delLector = await pedir('GET', `/obras/${OBRA}/historial?desde=${desde}&hasta=${hoy()}`, lector.acceso);
+  assert.ok(!delLector.json.fotos.some((f: { id: string }) => f.id === fotoId));
 
   const historial = (await pedir('GET', `/obras/${OBRA}/dia/${hoy()}`, editor.acceso)).json.historial
     .filter((h: { foto_id: string }) => h.foto_id === fotoId);

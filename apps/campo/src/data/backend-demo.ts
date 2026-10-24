@@ -101,5 +101,11 @@ export function crearBackendDemo(): Backend {
         materiales: MATERIALES_DEMO,
       };
     },
+
+    // Sin servidor no hay más fotos que las del teléfono.
+    async misFotos() {
+      if (!(await hayRed())) throw new ErrorSinConexion();
+      return { dias: [], siguiente: null };
+    },
   };
 }
