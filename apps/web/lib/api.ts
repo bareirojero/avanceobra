@@ -28,6 +28,7 @@ import type {
   PartePedido,
   PedidoMaterial,
   PedidoMaterialDetalle,
+  PedidoMaterialPedido,
   RegistroDia,
   RegistroDiaPedido,
   Sector,
@@ -97,6 +98,8 @@ export const api = {
   pedidos: (obra: string) => get<PedidoMaterialDetalle[]>(`/obras/${obra}/pedidos`),
   /** Solo editor. Devuelve los pedidos que cambiaron. */
   cambiarEstadoPedidos: (obra: string, p: CambiarEstadoPedidosPedido) => pedir<PedidoMaterial[]>("PATCH", `/obras/${obra}/pedidos/estado`, p),
+  /** Upsert idempotente desde el celular (campo): si ya llegó, devuelve el guardado. */
+  guardarPedido: (id: string, p: PedidoMaterialPedido) => pedir<unknown>("PUT", `/pedidos/${id}`, p),
 
   sectores: (obra: string) => get<Sector[]>(`/obras/${obra}/sectores`),
   crearSector: (obra: string, s: SectorPedido) => pedir<Sector>("POST", `/obras/${obra}/sectores`, s),

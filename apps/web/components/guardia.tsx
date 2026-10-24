@@ -5,7 +5,7 @@ import { Loader2 } from "lucide-react";
 import { useYo } from "@/lib/datos";
 import { BarraLateral } from "./barra-lateral";
 
-/** Pide sesión para todo salvo /ingresar, y arma el marco con la barra lateral. */
+/** Pide sesión para todo salvo /ingresar, y arma el marco con la barra lateral (salvo en /campo, la versión de celular). */
 export function Guardia({ children }: { children: React.ReactNode }) {
   const ruta = usePathname();
   const router = useRouter();
@@ -14,8 +14,8 @@ export function Guardia({ children }: { children: React.ReactNode }) {
   const publica = ruta === "/ingresar";
 
   useEffect(() => {
-    if (yo === null && !publica) router.replace("/ingresar");
-  }, [yo, publica, router]);
+    if (yo === null && !publica) router.replace(ruta.startsWith("/campo") ? "/ingresar?campo=1" : "/ingresar");
+  }, [yo, publica, router, ruta]);
 
   if (publica) return <>{children}</>;
   if (!yo) {
@@ -41,6 +41,7 @@ export function Guardia({ children }: { children: React.ReactNode }) {
       </div>
     );
   }
+  if (ruta.startsWith("/campo")) return <>{children}</>;
   return (
     <div className="flex min-h-screen flex-col md:flex-row">
       <BarraLateral />
