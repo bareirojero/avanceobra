@@ -10,11 +10,11 @@ export default function LayoutObra({ children }: { children: React.ReactNode }) 
   const router = useRouter();
   const { obra, rol } = useObra(id);
   // Campo y solo lectura miran el día de obra y los informes publicados; no editan nada.
-  // Solo lectura también baja los pedidos de materiales.
+  // Solo lectura también baja los pedidos de materiales y consulta el historial.
   const permitido =
     rol === "editor" ||
     (!!rol && (ruta === `/obras/${id}` || ruta.startsWith(`/obras/${id}/informes`))) ||
-    (rol === "lector" && (ruta.startsWith(`/obras/${id}/materiales`) || ruta.startsWith(`/obras/${id}/dashboard`)));
+    (rol === "lector" && ["materiales", "dashboard", "historial"].some((s) => ruta.startsWith(`/obras/${id}/${s}`)));
 
   useEffect(() => {
     if (obra && rol && !permitido) router.replace(`/obras/${id}/informes`);
