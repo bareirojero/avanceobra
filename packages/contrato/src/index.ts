@@ -516,6 +516,23 @@ export interface DiaRespuesta {
   historial: CambioFoto[];
 }
 
+/** Máximo de fotos que devuelve una consulta del historial de obra. */
+export const LIMITE_HISTORIAL = 500;
+
+/** GET /api/obras/:obraId/historial?desde&hasta[&item][&persona]: fotos vigentes de varios días.
+ * Un ítem título incluye las fotos de todos sus subítems. */
+export interface HistorialRespuesta {
+  desde: Fecha;
+  hasta: Fecha;
+  /** De la más nueva a la más vieja, con la fecha del parte al que pertenecen. */
+  fotos: (Foto & { fecha: Fecha })[];
+  anotaciones: Anotacion[];
+  /** Clima, personal y observaciones de los días que tienen fotos en el resultado. */
+  registros: RegistroDia[];
+  /** Hubo más de LIMITE_HISTORIAL fotos: se devolvieron las más nuevas. */
+  truncado: boolean;
+}
+
 export type AccionHistorial = 'editar' | 'borrar' | 'restaurar';
 
 /** Un cambio en una foto o en una de sus marcas; lo registra la base, nunca la API. */

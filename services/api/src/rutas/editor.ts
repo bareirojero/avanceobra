@@ -2,6 +2,7 @@
 // Los permisos los decide la base (RLS y funciones); acá solo se valida forma.
 
 import type { FastifyInstance } from 'fastify';
+import { LIMITE_HISTORIAL } from '@registro-obra/contrato';
 import { z } from 'zod';
 import { autenticar } from '../auth.ts';
 import { conUsuario } from '../db.ts';
@@ -252,6 +253,46 @@ export async function rutasEditor(app: FastifyInstance) {
         [p.obraId, p.fecha],
       );
       return { fecha: p.fecha, partes, fotos, anotaciones, registro: registro ?? null, informe: informe ?? null, historial };
+    });
+  });
+
+  // --- Historial de obra: fotos de varios días, por ítem y persona ---
+
+  app.get('/obras/:obraId/historial', async (pedido) => {
+    const { obraId } = ObraParam.parse(pedido.params);
+    const p = z
+      .object({
+        desde: fecha,
+        hasta: fecha,
+        item: uuid.optional(),
+        persona: uuid.optional(),
+      })
+      .refine((x) => x.desde <= x.hasta, 'desde debe ser anterior a hasta')
+      .parse(pedido.query);
+    return como(pedido, async (q) => {
+      // Solo lo vigente; qué fotos ve cada uno lo decide RLS. Un ítem título incluye todo lo que cuelga de él.
+      const filas = await q(
+        `with recursive rama as (
+           select id from items where id = $4 and obra_id = $1
+           union all select i.id from items i join rama r on i.padre_id = r.id
+         )
+         select f.*, p.fecha from fotos f join partes_diarios p on p.id = f.parte_id
+          where f.obra_id = $1 and p.fecha between $2 and $3 and f.eliminado_en is null and p.eliminado_en is null
+            and ($4::uuid is null or f.item_id in (select id from rama)) and ($5::uuid is null or f.autor_id = $5)
+          order by p.fecha desc, f.tomada_en desc limit $6`,
+        [obraId, p.desde, p.hasta, p.item ?? null, p.persona ?? null, LIMITE_HISTORIAL + 1],
+      );
+      const fotos = filas.slice(0, LIMITE_HISTORIAL);
+      const ids = fotos.map((f) => f.id);
+      const anotaciones = await q(
+        `select * from anotaciones where foto_id = any($1) and eliminado_en is null order by foto_id, numero`,
+        [ids],
+      );
+      const registros = await q(`select * from registros_dia where obra_id = $1 and fecha = any($2::date[])`, [
+        obraId,
+        [...new Set(fotos.map((f) => f.fecha))],
+      ]);
+      return { desde: p.desde, hasta: p.hasta, fotos, anotaciones, registros, truncado: filas.length > LIMITE_HISTORIAL };
     });
   });
 

@@ -2,7 +2,7 @@
 // Lecturas de la API para las pantallas, con caché y revalidación (SWR).
 import { useMemo } from "react";
 import useSWR from "swr";
-import type { CargoObra, DiaRespuesta, Informe, Item, Material, PedidoMaterialDetalle, RolObra, Sector, UsuarioConObras, Yo } from "@registro-obra/contrato";
+import type { CargoObra, DiaRespuesta, HistorialRespuesta, Informe, Item, Material, PedidoMaterialDetalle, RolObra, Sector, UsuarioConObras, Yo } from "@registro-obra/contrato";
 import { api, ErrorDeApi } from "./api";
 
 const opciones = { revalidateOnFocus: true, shouldRetryOnError: (e: unknown) => !(e instanceof ErrorDeApi && e.estado < 500) };
@@ -96,6 +96,16 @@ export function useDia(obraId: string, fecha: string) {
     };
   }, [data]);
   return { ...dia, cargando: isLoading, mutate };
+}
+
+/** Fotos vigentes entre dos fechas, opcionalmente de un ítem (o título, con sus subítems) y de una persona. */
+export function useHistorial(obraId: string, f: { desde: string; hasta: string; item?: string; persona?: string }) {
+  const q = new URLSearchParams({ desde: f.desde, hasta: f.hasta, ...(f.item && { item: f.item }), ...(f.persona && { persona: f.persona }) });
+  const { data, isLoading, error } = useSWR<HistorialRespuesta>(f.desde <= f.hasta ? `/obras/${obraId}/historial?${q}` : null, api.get, {
+    ...opciones,
+    keepPreviousData: true,
+  });
+  return { historial: data, cargando: isLoading, error };
 }
 
 export function useInformes(obraId: string) {

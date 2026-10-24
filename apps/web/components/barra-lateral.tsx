@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Building2, CalendarDays, ChartColumn, FileText, Info, ListChecks, LogOut, Package, Settings, Users } from "lucide-react";
+import { Building2, CalendarDays, ChartColumn, FileText, History, Info, ListChecks, LogOut, Package, Settings, Users } from "lucide-react";
 import { useSWRConfig } from "swr";
 import { api } from "@/lib/api";
 import { useObra, useYo } from "@/lib/datos";
@@ -22,6 +22,7 @@ export function BarraLateral() {
         { href: `${base}/informes`, texto: "Informes", icono: FileText, activo: ruta.startsWith(`${base}/informes`) },
         ...(rol === "editor" || rol === "lector"
           ? [
+              { href: `${base}/historial`, texto: "Historial", icono: History, activo: ruta.startsWith(`${base}/historial`) },
               { href: `${base}/materiales`, texto: "Materiales", icono: Package, activo: ruta.startsWith(`${base}/materiales`) },
               { href: `${base}/dashboard`, texto: "Dashboard", icono: ChartColumn, activo: ruta.startsWith(`${base}/dashboard`) },
             ]
