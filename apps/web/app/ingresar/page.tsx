@@ -3,6 +3,18 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { api, ErrorDeApi } from "@/lib/api";
 import { useYo } from "@/lib/datos";
+import type { Yo } from "@registro-obra/contrato";
+
+/**
+ * Va a la versión de celular (/campo) si se pidió desde ahí, si es la app instalada en la
+ * pantalla de inicio, o si es alguien de campo desde un celular.
+ */
+function irACampo(yo: Yo) {
+  if (new URLSearchParams(location.search).has("campo")) return true;
+  if (matchMedia("(display-mode: standalone)").matches) return true;
+  const soloCampo = !yo.usuario.es_admin && yo.obras.length > 0 && yo.obras.every((o) => o.rol === "campo");
+  return soloCampo && matchMedia("(max-width: 767px)").matches;
+}
 
 export default function Ingresar() {
   const router = useRouter();
@@ -19,7 +31,7 @@ export default function Ingresar() {
     try {
       const r = await api.login(usuario.trim().toLowerCase(), clave);
       await mutate(r.yo, { revalidate: false });
-      router.replace("/obras");
+      router.replace(irACampo(r.yo) ? "/campo" : "/obras");
     } catch (err) {
       setError(err instanceof ErrorDeApi && err.estado === 401 ? "Usuario o contraseña incorrectos." : "No se pudo conectar. Probá de nuevo.");
     } finally {
