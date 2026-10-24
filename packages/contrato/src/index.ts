@@ -240,7 +240,21 @@ export interface PedidoMaterial extends Sincronizable {
   necesario_para: Fecha | null;
   pedido_en: Instante;
   fotos: string[]; // rutaFotoPedido(...), solo de referencia
+  estado: EstadoPedido; // lo cambia el editor; campo lo ve en la app
+  estado_cambiado_por: Uuid | null;
+  estado_cambiado_en: Instante | null;
 }
+
+/** En qué anda un pedido. Los que llegan de campo empiezan en 'enviado'. */
+export type EstadoPedido = 'enviado' | 'rechazado' | 'planificando' | 'en_compra' | 'disponible';
+export const ESTADOS_PEDIDO = ['enviado', 'rechazado', 'planificando', 'en_compra', 'disponible'] as const satisfies readonly EstadoPedido[];
+export const NOMBRE_ESTADO_PEDIDO: Record<EstadoPedido, string> = {
+  enviado: 'Enviado',
+  rechazado: 'Rechazado',
+  planificando: 'Planificando',
+  en_compra: 'En compra',
+  disponible: 'Disponible en obra',
+};
 
 /** Código que sale en el Excel para un material escrito a mano. */
 export const CODIGO_MATERIAL_NUEVO = 'CREAR RECURSO EN SAP';
@@ -488,6 +502,18 @@ export interface PedidoMaterialDetalle extends PedidoMaterial {
   item_codigo: string;
   item_numero: string | null;
   item_descripcion: string;
+}
+
+/** PATCH /api/obras/:obraId/pedidos/estado (solo editor) → PedidoMaterial[] cambiados */
+export interface CambiarEstadoPedidosPedido {
+  ids: Uuid[];
+  estado: EstadoPedido;
+}
+
+/** GET /api/obras/:obraId/mis-pedidos?desde= → los pedidos de quien pregunta, de todas las fechas, cambiados después de `desde` */
+export interface MisPedidosRespuesta {
+  hasta: Instante;
+  pedidos: PedidoMaterial[];
 }
 
 /** PATCH /api/items/:id */

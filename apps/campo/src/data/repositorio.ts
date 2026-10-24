@@ -324,29 +324,34 @@ export async function materiales(): Promise<MaterialCampo[]> {
   return (await db()).getAllAsync<MaterialCampo>('SELECT * FROM materiales WHERE eliminado_en IS NULL ORDER BY orden');
 }
 
-export interface PedidoLocal extends Omit<PedidoMaterial, 'fotos'> {
+export interface PedidoLocal extends Omit<PedidoMaterial, 'fotos' | 'estado_cambiado_por'> {
   material: string;
   unidad: string | null;
   fotos: number;
-  estado: EstadoEnvio;
+  /** Si ya llegó a la oficina; `estado` es en qué anda el pedido (lo marca el editor). */
+  envio: EstadoEnvio;
   error: string | null;
 }
 
-/** Pedidos de esta persona en la obra (los hechos desde este teléfono), del más nuevo al más viejo. */
+/**
+ * Pedidos de esta persona en la obra, de todas las fechas (los hechos desde este teléfono y
+ * los que bajan del servidor), del más nuevo al más viejo.
+ */
 export async function misPedidos(obraId: string, autorId: string): Promise<PedidoLocal[]> {
-  const filas = await (await db()).getAllAsync<Omit<PedidoLocal, 'estado' | 'fotos'> & { en_cola: number; fotos: string }>(
+  const filas = await (await db()).getAllAsync<Omit<PedidoLocal, 'envio' | 'fotos'> & { en_cola: number; fotos: string }>(
     `SELECT p.*, COALESCE(m.descripcion, p.material_texto, 'Material') AS material, COALESCE(m.unidad, p.unidad_texto) AS unidad,
        (SELECT c.error FROM cola_salida c WHERE c.grupos LIKE '%"' || p.id || '"%' AND c.error IS NOT NULL LIMIT 1) AS error,
        EXISTS (SELECT 1 FROM cola_salida c WHERE c.grupos LIKE '%"' || p.id || '"%') AS en_cola
      FROM pedidos_materiales p LEFT JOIN materiales m ON m.id = p.material_id
      WHERE p.obra_id = ? AND p.autor_id = ? AND p.eliminado_en IS NULL
-     ORDER BY p.pedido_en DESC LIMIT 200`,
+     ORDER BY p.pedido_en DESC LIMIT 2000`,
     obraId, autorId,
   );
   return filas.map(({ en_cola, fotos, ...p }) => ({
     ...p,
+    estado: p.estado ?? 'enviado',
     fotos: (JSON.parse(fotos || '[]') as unknown[]).length,
-    estado: p.error ? 'error' : en_cola ? 'pendiente' : 'subida',
+    envio: p.error ? 'error' : en_cola ? 'pendiente' : 'subida',
   }));
 }
 
@@ -376,7 +381,8 @@ export async function guardarPedido(d: PedidoAGuardar): Promise<void> {
     id, obra_id: d.obraId, autor_id: d.autorId, material_id: d.materialId,
     material_texto: d.materialId ? null : d.materialTexto, unidad_texto: d.materialId ? null : d.unidadTexto,
     item_id: d.itemId, cantidad: d.cantidad, necesario_para: d.necesarioPara, pedido_en: ahora,
-    fotos: fotos.map((f) => f.ruta), creado_en: ahora, actualizado_en: ahora, eliminado_en: null,
+    fotos: fotos.map((f) => f.ruta), estado: 'enviado', estado_cambiado_por: null, estado_cambiado_en: null,
+    creado_en: ahora, actualizado_en: ahora, eliminado_en: null,
   };
   const fila: PedidoMaterialPedido = {
     obra_id: p.obra_id, material_id: p.material_id, material_texto: p.material_texto, unidad_texto: p.unidad_texto,

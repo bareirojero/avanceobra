@@ -1,4 +1,4 @@
-import { color, marca, onColor, radius, space, syncState, touch, type } from '@registro-obra/ui-tokens';
+import { color, marca, onColor, pedidoState, radius, space, syncState, touch, type } from '@registro-obra/ui-tokens';
 
 /**
  * Tema de la app de campo. Los valores salen de @registro-obra/ui-tokens (hilo de
@@ -7,7 +7,7 @@ import { color, marca, onColor, radius, space, syncState, touch, type } from '@r
  * El acento es provisorio hasta tener la marca: cuando llegue, sale de
  * organizaciones.color_primario y el texto encima usa onColor().
  */
-export { color, marca, onColor, radius, space, syncState };
+export { color, marca, onColor, pedidoState, radius, space, syncState };
 
 export const t = type.campo;
 export const toque = touch.campo;

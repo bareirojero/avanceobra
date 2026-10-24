@@ -82,6 +82,16 @@ export const informeState = {
   error: { label: 'Error', bg: color.dangerSoft, fg: color.dangerText },
 } as const;
 
+// Estado de un pedido de materiales (contrato: EstadoPedido). `dot` es el color pleno;
+// la etiqueta va con `fg` sobre `bg`.
+export const pedidoState = {
+  enviado: { label: 'Enviado', bg: '#FFF4CC', fg: '#6B4F00', dot: '#FEC502' }, // amarillo
+  rechazado: { label: 'Rechazado', bg: color.dangerSoft, fg: color.dangerText, dot: color.danger }, // rojo
+  planificando: { label: 'Planificando', bg: '#FFEAD5', fg: '#8A4500', dot: '#F28C28' }, // naranja
+  en_compra: { label: 'En compra', bg: '#F9DCC8', fg: '#6E2A05', dot: '#C2410C' }, // naranja oscuro
+  disponible: { label: 'Disponible en obra', bg: color.okSoft, fg: color.okText, dot: color.ok }, // verde
+} as const;
+
 // Marcas sobre la foto: la seleccionada usa accent, las demás blanco, borde ink.
 // Archivos de logo en packages/ui-tokens/assets/marca (ver el README de esa carpeta).
 // El nombre del producto vive en @registro-obra/contrato (NOMBRE_APP).

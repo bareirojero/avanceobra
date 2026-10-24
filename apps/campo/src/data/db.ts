@@ -106,6 +106,11 @@ const MIGRACIONES: string[] = [
   `,
   // Categoría del ítem: 'obra' (del Excel) o las entradas fijas incidente, dron y pluviometro.
   `ALTER TABLE items ADD COLUMN categoria TEXT NOT NULL DEFAULT 'obra';`,
+  // Estado del pedido (lo marca el editor en la web). Los que ya estaban quedan como enviados.
+  `
+  ALTER TABLE pedidos_materiales ADD COLUMN estado TEXT NOT NULL DEFAULT 'enviado';
+  ALTER TABLE pedidos_materiales ADD COLUMN estado_cambiado_en TEXT;
+  `,
 ];
 
 /** Espera de hasta 20 s si otra conexión está escribiendo (la sincronización) en vez de fallar. */

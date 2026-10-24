@@ -1,6 +1,6 @@
 import type { MaterialCampo } from '@registro-obra/contrato';
 
-import { fechaCorta } from './fechas';
+import { diaYFecha, fechaCorta, fechaParte } from './fechas';
 
 const normal = (t: string) => t.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '');
 
@@ -42,4 +42,22 @@ export function proximosDias(hoy: string, cantidad = 14): { fecha: string; texto
     const texto = i === 0 ? 'Hoy' : i === 1 ? 'Mañana' : `${DIAS[f.getUTCDay()]} ${fechaCorta(fecha)}`;
     return { fecha, texto };
   });
+}
+
+/**
+ * Pedidos agrupados por el día en que se hicieron (hora de Paraguay), en el orden en que
+ * vienen: "Hoy 24/10", "Ayer 23/10", "Martes 21/10".
+ */
+export function agruparPorDia<T extends { pedido_en: string }>(pedidos: T[], ahora = new Date()): { titulo: string; data: T[] }[] {
+  const hoy = fechaParte(ahora);
+  const ayer = fechaParte(new Date(ahora.getTime() - 86_400_000));
+  const grupos: { titulo: string; data: T[] }[] = [];
+  for (const p of pedidos) {
+    const f = fechaParte(new Date(p.pedido_en));
+    const titulo = f === hoy ? `Hoy ${fechaCorta(f)}` : f === ayer ? `Ayer ${fechaCorta(f)}` : diaYFecha(f);
+    const ultimo = grupos[grupos.length - 1];
+    if (ultimo?.titulo === titulo) ultimo.data.push(p);
+    else grupos.push({ titulo, data: [p] });
+  }
+  return grupos;
 }

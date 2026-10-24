@@ -102,6 +102,11 @@ export function crearBackendDemo(): Backend {
       };
     },
 
+    // Sin servidor no hay quien cambie el estado: quedan los pedidos hechos en el teléfono.
+    async misPedidos() {
+      return { hasta: ACTUALIZADO, pedidos: [] };
+    },
+
     // Sin servidor no hay más fotos que las del teléfono.
     async misFotos() {
       if (!(await hayRed())) throw new ErrorSinConexion();
